@@ -1,0 +1,2 @@
+javac -cp /usr/lib/hadoop/*:/usr/lib/hadoop/client-0.20/* -d weather_classes *.java
+jar -cvf weather.jar -C weather_classes/ .
