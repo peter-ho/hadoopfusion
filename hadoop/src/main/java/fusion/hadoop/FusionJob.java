@@ -23,7 +23,8 @@ public class FusionJob {
 		return new FusionJob(conf);
 	}
 	
-	protected final static String FUSION_PATH = "E:\\Java\\temp\\fusion_temp";
+	//protected final static String FUSION_PATH = "E:\\Java\\temp\\fusion_temp";
+	protected final static String FUSION_PATH = "/user/peter/fusion";
 	protected static File initTempStorage(String jobId) {
 		// TODO implement init temporary storage
 		File fusionPath = new File(FUSION_PATH);
