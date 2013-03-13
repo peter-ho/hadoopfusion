@@ -2,48 +2,67 @@ package fusion.hadoop.fusionkeycreation;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.StringTokenizer;
 
+import org.apache.commons.lang.ObjectUtils.Null;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import fusion.hadoop.FusionConfigurationKeys;
 
-public class FusionKeyCreationMap<KEYIN, VALUEIN, KEYOUT, VALUEOUT> 
-extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
+//public class FusionKeyCreationMap<KEYIN, VALUEIN, KEYOUT, VALUEOUT> 
+public class FusionKeyCreationMap
+// extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
+		extends Mapper<LongWritable, Text, Text, NullWritable> {
 
-	protected Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> m_inputMapper;
-	protected Context m_context;
-	
-	class KeyOnlyContext extends Context {
-		protected Context m_ctxt;
-		
-		public KeyOnlyContext(Context ctxt) {
-			m_ctxt = ctxt;
+	public class KeyOnlyContext extends
+			Mapper<LongWritable, Text, Text, IntWritable>.Context {
+
+		protected Mapper<LongWritable, Text, Text, NullWritable>.Context m_context;
+
+		protected KeyOnlyContext() {
+			super();
 		}
-		
+
+		public KeyOnlyContext(
+				Mapper<LongWritable, Text, Text, NullWritable>.Context ctxt) {
+			super();
+			m_context = ctxt;
+		}
+
 		public InputSplit getInputSplit() {
 			return m_context.getInputSplit();
 		}
 
-		public KEYIN getCurrentKey() throws IOException, InterruptedException {
+		// public KEYIN getCurrentKey() throws IOException, InterruptedException
+		// {
+		public LongWritable getCurrentKey() throws IOException,
+				InterruptedException {
 			return m_context.getCurrentKey();
 		}
 
-		public VALUEIN getCurrentValue() throws IOException,
-				InterruptedException {
+		// public VALUEIN getCurrentValue() throws IOException,
+		public Text getCurrentValue() throws IOException, InterruptedException {
 			return m_context.getCurrentValue();
 		}
 
@@ -53,11 +72,6 @@ extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 
 		public boolean nextKeyValue() throws IOException, InterruptedException {
 			return m_context.nextKeyValue();
-		}
-
-		public void write(KEYOUT arg0, VALUEOUT arg1) throws IOException,
-				InterruptedException {
-			m_context.write(arg0, null);
 		}
 
 		public Counter getCounter(Enum<?> arg0) {
@@ -240,19 +254,36 @@ extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 		public void progress() {
 			m_context.progress();
 		}
-		
+
+		public void write(Text key, IntWritable value) throws IOException,
+				InterruptedException {
+			m_context.write(key, NullWritable.get());
+		}
 	}
 
+	// protected Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> m_inputMapper;
+	protected Mapper<LongWritable, Text, Text, IntWritable> m_inputMapper;
+	protected KeyOnlyContext m_koc;
+
+	private Text word = new Text();
+	private final static IntWritable one = new IntWritable(1);
+
+	/*
+	protected void setup(Context context) throws IOException,
+			InterruptedException {
+		super.setup(context);
+		// TODO: invoke inputMapper's init
+	}
+	*/
+
 	@Override
-	public void run(Context context)
-			throws IOException, InterruptedException {
-		try {
-			m_inputMapper = (Mapper<KEYIN,VALUEIN,KEYOUT,VALUEOUT>)
-					ReflectionUtils.newInstance(context.getMapperClass(), null);
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public void run(Context context) throws IOException, InterruptedException {
+		Class<Mapper<LongWritable, Text, Text, IntWritable>> mapperClass = 
+				(Class<Mapper<LongWritable, Text, Text, IntWritable>>) 
+				context.getConfiguration().getClass(FusionConfigurationKeys.CONFIG_KEY_INPUT_MAPPER_CLASS, String.class);
+		m_inputMapper = (Mapper<LongWritable, Text, Text, IntWritable>) ReflectionUtils
+				.newInstance(mapperClass, null);
+		m_koc = new KeyOnlyContext(context);
 
 		KeyOnlyContext koc = new KeyOnlyContext(context);
 		m_inputMapper.run(koc);
