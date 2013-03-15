@@ -33,19 +33,19 @@ import fusion.hadoop.FusionConfigurationKeys;
 //public class FusionKeyCreationMap<KEYIN, VALUEIN, KEYOUT, VALUEOUT> 
 public class FusionKeyCreationMap
 // extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
-		extends Mapper<LongWritable, Text, Text, NullWritable> {
+		extends Mapper<LongWritable, Text, Text, Text> {
 
 	public class KeyOnlyContext extends
 			Mapper<LongWritable, Text, Text, IntWritable>.Context {
 
-		protected Mapper<LongWritable, Text, Text, NullWritable>.Context m_context;
+		protected Mapper<LongWritable, Text, Text, Text>.Context m_context;
 
 		protected KeyOnlyContext() {
 			super();
 		}
 
 		public KeyOnlyContext(
-				Mapper<LongWritable, Text, Text, NullWritable>.Context ctxt) {
+				Mapper<LongWritable, Text, Text, Text>.Context ctxt) {
 			super();
 			m_context = ctxt;
 		}
@@ -257,16 +257,17 @@ public class FusionKeyCreationMap
 
 		public void write(Text key, IntWritable value) throws IOException,
 				InterruptedException {
-			m_context.write(key, NullWritable.get());
+			//m_context.write(key, NullWritable.get());
+			m_context.write(key, word);
 		}
 	}
 
 	// protected Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> m_inputMapper;
 	protected Mapper<LongWritable, Text, Text, IntWritable> m_inputMapper;
 	protected KeyOnlyContext m_koc;
+	private final static IntWritable zero = new IntWritable(0);
 
-	private Text word = new Text();
-	private final static IntWritable one = new IntWritable(1);
+	private final static Text word = new Text();
 
 	/*
 	protected void setup(Context context) throws IOException,
@@ -283,7 +284,6 @@ public class FusionKeyCreationMap
 				context.getConfiguration().getClass(FusionConfigurationKeys.CONFIG_KEY_INPUT_MAPPER_CLASS, String.class);
 		m_inputMapper = (Mapper<LongWritable, Text, Text, IntWritable>) ReflectionUtils
 				.newInstance(mapperClass, null);
-		m_koc = new KeyOnlyContext(context);
 
 		KeyOnlyContext koc = new KeyOnlyContext(context);
 		m_inputMapper.run(koc);
