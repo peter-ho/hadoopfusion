@@ -86,12 +86,14 @@ public class FusionKeyCreation {
 		
 	public static int main(String inputPath, String outputPath) throws IOException, InterruptedException, ClassNotFoundException
 	{
+		String tempOutput = outputPath + "Output";
 		System.out.println("FusionKeyCreation job begins");
 		
 		// configuration should contain reference to your namenode
 		FileSystem fs = FileSystem.get(new Configuration());
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(outputPath), true);
+		fs.delete(new Path(tempOutput), true);
 
 		Job job = Job.getInstance();
 		job.setJarByClass(FusionKeyCreation.class);
@@ -112,8 +114,8 @@ public class FusionKeyCreation {
 		System.out.println("FusionKeyCreation job ends");
 		
 		System.out.println("Handle remainder starts");
-		//fs.open("");
-		System.out.println("Handle remainder ends");		
+		System.out.println("Handle remainder ends");
+		/// move actual output to output path
 		return status;
 	}
 }

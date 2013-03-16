@@ -85,7 +85,8 @@ public class WordCountFused
 			System.exit(-1);
 		}
 		
-		int status = FusionKeyCreation.main(args[0], "/user/peter/fusion/FusionKeyCreation");
+		final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
+		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
 		System.exit(status);
 	}
 
