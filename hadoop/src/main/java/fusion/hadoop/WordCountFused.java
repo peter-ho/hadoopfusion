@@ -15,6 +15,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
+
 
 // https://ccp.cloudera.com/display/CDH4DOC/Using+the+CDH4+Maven+Repository
 public class WordCountFused
@@ -51,7 +53,7 @@ public class WordCountFused
 		}
 	}
 
-	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
+	public static void main1( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
 	{
 		if (args.length != 2) 
 		{
@@ -74,4 +76,17 @@ public class WordCountFused
 
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
 	}
+	
+	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		if (args.length != 2) 
+		{
+			System.err.println("Usage: WordCount <input path> <output path>");
+			System.exit(-1);
+		}
+		
+		int status = FusionKeyCreation.main(args[0], "/user/peter/fusion/FusionKeyCreation");
+		System.exit(status);
+	}
+
 }
