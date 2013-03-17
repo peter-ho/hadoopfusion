@@ -79,14 +79,14 @@ public class FusionKeyCreation {
 		main(args[0], args[1]);
 	}
 
-	protected static int executeFusionKeyCreationJob(String inputPath, String outputPath, String tempOutputPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException {
+	protected static int executeFusionKeyCreationJob(String inputPath, String outputPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException {
 		System.out.println("FusionKeyCreation job begins");
 		Job job = Job.getInstance();
 		job.setJarByClass(FusionKeyCreation.class);
 		job.setJobName("FusionKeyCreation");
 
 		FileInputFormat.addInputPath(job, new Path(inputPath));
-		FileOutputFormat.setOutputPath(job, new Path(tempOutputPath));
+		FileOutputFormat.setOutputPath(job, new Path(outputPath));
 
 		job.setMapperClass(FusionKeyMapper.class);
 		job.setReducerClass(FusionKeyReducer.class);
@@ -101,79 +101,80 @@ public class FusionKeyCreation {
 		return status;
 	}
 	
-	public static ArrayList<String[]> parseRemainderFiles(String outputPath, String tempOutputPath, FileSystem fs) throws IOException {
-		ArrayList<String[]> remainderKeys = new ArrayList<String[]>();
-		String[] keys;
-		System.out.println("Handle remainder starts");
-		FileStatus[] fss = fs.globStatus(new Path(tempOutputPath + "/remainder-r-*"));
-		String last = null;
-		for (FileStatus fst : fss) {
-			FSDataInputStream in = fs.open(fst.getPath());
-			String line = in.readLine();
-			while (line != null) {
-				if (last == null) last = line;
-				else {
-					remainderKeys.add(new String[] { line, last});
-					last = null;
-				}
-				line = in.readLine();
-			}
-			in.close();
-		}
-		if (last != null) remainderKeys.add(new String[] { last });
-		System.out.println("Handle remainder ends");
-		return remainderKeys;
-	}
-	
-	protected static void saveRemainder(ArrayList<String[]> remainders, FileSystem fs, String tempOutputPath) throws IOException {
-		if (remainders.size() > 0) {
-			FSDataOutputStream outputStrm = fs.append(new Path(tempOutputPath + "/fusionkey-r-00000" ));
-			for (String[] keys : remainders) {
-				if (keys.length > 1) {
-					outputStrm.writeChars(keys[0]);
-					outputStrm.write('\t');
-					outputStrm.writeChars(keys[1]);
-					outputStrm.write('\r');
-					outputStrm.write('\n');
-					outputStrm.writeChars(keys[1]);
-					outputStrm.write('\t');
-					outputStrm.writeChars(keys[0]);
-					outputStrm.write('\r');
-					outputStrm.write('\n');
-				} else {
-					outputStrm.writeChars(keys[0]);
-					outputStrm.write('\r');
-					outputStrm.write('\n');
-				}
-			}
-			outputStrm.close();
-		}
-	}
+//	public static ArrayList<String[]> parseRemainderFiles(String outputPath, String tempOutputPath, FileSystem fs) throws IOException {
+//		ArrayList<String[]> remainderKeys = new ArrayList<String[]>();
+//		String[] keys;
+//		System.out.println("Handle remainder starts");
+//		FileStatus[] fss = fs.globStatus(new Path(tempOutputPath + "/remainder-r-*"));
+//		String last = null;
+//		for (FileStatus fst : fss) {
+//			FSDataInputStream in = fs.open(fst.getPath());
+//			String line = in.readLine();
+//			while (line != null) {
+//				if (last == null) last = line;
+//				else {
+//					remainderKeys.add(new String[] { line, last});
+//					last = null;
+//				}
+//				line = in.readLine();
+//			}
+//			in.close();
+//		}
+//		if (last != null) remainderKeys.add(new String[] { last });
+//		System.out.println("Handle remainder ends");
+//		return remainderKeys;
+//	}
+//	
+//	protected static void saveRemainder(ArrayList<String[]> remainders, FileSystem fs, String tempOutputPath) throws IOException {
+//		if (remainders.size() > 0) {
+//			FSDataOutputStream outputStrm = fs.append(new Path(tempOutputPath + "/fusionkey-r-00000" ));
+//			for (String[] keys : remainders) {
+//				if (keys.length > 1) {
+//					outputStrm.writeChars(keys[0]);
+//					outputStrm.write('\t');
+//					outputStrm.writeChars(keys[1]);
+//					outputStrm.write('\r');
+//					outputStrm.write('\n');
+//					outputStrm.writeChars(keys[1]);
+//					outputStrm.write('\t');
+//					outputStrm.writeChars(keys[0]);
+//					outputStrm.write('\r');
+//					outputStrm.write('\n');
+//				} else {
+//					outputStrm.writeChars(keys[0]);
+//					outputStrm.write('\r');
+//					outputStrm.write('\n');
+//				}
+//			}
+//			outputStrm.close();
+//		}
+//	}
 
-	protected static void moveToOutput(FileSystem fs, String tempOutputPath, String outputPath) throws IOException {
-		fs.rename(new Path(tempOutputPath + "/fusionkey-r-*"), new Path(outputPath + "/fusionkey-r-*"));
-	}
+//	protected static void moveToOutput(FileSystem fs, String tempOutputPath, String outputPath) throws IOException {
+//		/// TODO: fix moving
+//		fs.rename(new Path(tempOutputPath + "/fusionkey-r-*"), new Path(outputPath + "/fusionkey-r-*"));
+//	}
 	
 	public static int main(String inputPath, String outputPath) throws IOException, InterruptedException, ClassNotFoundException
 	{
-		String tempOutputPath = outputPath + "Output";
+//		String tempOutputPath = outputPath + "Output";
 		
 		Configuration conf = new Configuration();
 		// configuration should contain reference to your namenode
 		FileSystem fs = FileSystem.get(conf);
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(outputPath), true);
-		fs.delete(new Path(tempOutputPath), true);
-		fs.makeQualified(new Path(outputPath));
+//		fs.delete(new Path(tempOutputPath), true);
+		fs.mkdirs(new Path(outputPath));
 		
-		int status = executeFusionKeyCreationJob(inputPath, outputPath, tempOutputPath, fs);
+		int status = executeFusionKeyCreationJob(inputPath, outputPath, fs);
 		
 		if (status == 0) {
 			/// handle remainder
 			//ArrayList<String[]> remainders = parseRemainderFiles(outputPath, tempOutputPath, fs);
 			//saveRemainder(remainders, fs, tempOutputPath);
 			/// move actual output to output path
-			moveToOutput(fs, tempOutputPath, outputPath);
+			//moveToOutput(fs, tempOutputPath, outputPath);
 		}
 		return status;
 	}
