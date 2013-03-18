@@ -1,6 +1,7 @@
 package fusion.hadoop;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.Path;
@@ -15,6 +16,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import fusion.hadoop.fusionexecution.FusionExecution;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
 
 
@@ -77,7 +79,7 @@ public class WordCountFused
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
 	}
 	
-	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
+	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
 	{
 		if (args.length != 2) 
 		{
@@ -85,8 +87,12 @@ public class WordCountFused
 			System.exit(-1);
 		}
 		
-		final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
+		final String fusionKeyMapPath =  "hdfs://piccolo.saints.com:8020/user/peter/fusion/FusionKeyMap";
+		//final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
 		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
+		if (status == 0) {
+			status = FusionExecution.main(args[0], fusionKeyMapPath, args[1]);
+		}
 		System.exit(status);
 	}
 

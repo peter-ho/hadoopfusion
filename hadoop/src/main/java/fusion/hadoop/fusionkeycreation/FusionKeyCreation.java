@@ -164,9 +164,7 @@ public class FusionKeyCreation {
 		FileSystem fs = FileSystem.get(conf);
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(outputPath), true);
-//		fs.delete(new Path(tempOutputPath), true);
-		fs.mkdirs(new Path(outputPath));
-		
+
 		int status = executeFusionKeyCreationJob(inputPath, outputPath, fs);
 		
 		if (status == 0) {

@@ -1,16 +1,19 @@
 package fusion.hadoop.fusionexecution;
 
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -75,11 +78,11 @@ public class FusionExecution {
 		}
 	}
 	
-	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		main(args[0], args[1], args[2]);
 	}
 
-	protected static int executeFusionExecutionJob(String inputPath, String outputPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException {
+	protected static int executeFusionExecutionJob(String inputPath, String outputPath, String fusionKeyPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		System.out.println("FusionExecutionCreation job begins");
 		Job job = Job.getInstance();
 		job.setJarByClass(FusionExecution.class);
@@ -94,22 +97,38 @@ public class FusionExecution {
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);		
+		job.setOutputValueClass(IntWritable.class);
+		
+		
+		job.addCacheFile(new URI(fusionKeyPath));
 
-		int status = job.waitForCompletion(true) ? 0 : 1;
+		int status = 0;//job.waitForCompletion(true) ? 0 : 1;
 		System.out.println("FusionExecution job ends with status " + status);
 		return status;
 	}
+
+	protected static void addFusionKeyCacheFiles(Job job, FileSystem fs, String fusionKeyPath) throws IOException, URISyntaxException {
+		addCacheFiles(job, fs, fusionKeyPath + "/remainder-r-*");
+		addCacheFiles(job, fs, fusionKeyPath + "/fusionkey-r-*");
+	}
+
+	protected static void addCacheFiles(Job job, FileSystem fs, String pattern) throws IOException, URISyntaxException {
+		FileStatus[] fss = fs.globStatus(new Path(pattern));
+		for (FileStatus fst : fss) {
+			job.addCacheFile(new URI(fst.getPath().toString()));
+			System.out.println("\tadding cache path: " + fst.getPath().toString());
+		}
+	}
 	
-	public static int main(String inputPath, String fusionKeyPath, String outputPath) throws IOException, InterruptedException, ClassNotFoundException
-	{		
+	public static int main(String inputPath, String fusionKeyPath, String outputPath) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
+	{
 		Configuration conf = new Configuration();
 		// configuration should contain reference to your namenode
 		FileSystem fs = FileSystem.get(conf);
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(outputPath), true);
 		
-		int status = executeFusionExecutionJob(inputPath, outputPath, fs);
+		int status = executeFusionExecutionJob(inputPath, outputPath, fusionKeyPath, fs);
 		
 		if (status == 0) {
 			
