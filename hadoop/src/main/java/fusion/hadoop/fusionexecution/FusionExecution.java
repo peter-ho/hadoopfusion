@@ -28,17 +28,23 @@ import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
 public class FusionExecution {
 	public static class FusionExecutionMapper
-	extends Mapper<LongWritable, Text, Text, NullWritable> {
+	extends Mapper<LongWritable, Text, Text, IntWritable> {
 		private Text word = new Text();
 		private final static IntWritable one = new IntWritable(1);
 
 		@Override
+		protected void setup(Context context) {
+			
+		}
+		
+		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
+			// TODO: invoke input map class map method
 			StringTokenizer tokenizer = new StringTokenizer(value.toString());
 			while (tokenizer.hasMoreTokens()) {
 				word.set(tokenizer.nextToken());
-				context.write(word, NullWritable.get());
+				context.write(word, one);
 			}
 		}
 	}
@@ -98,9 +104,7 @@ public class FusionExecution {
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
-		
-		
-		job.addCacheFile(new URI(fusionKeyPath));
+		addFusionKeyCacheFiles(job, fs, fusionKeyPath);
 
 		int status = 0;//job.waitForCompletion(true) ? 0 : 1;
 		System.out.println("FusionExecution job ends with status " + status);
