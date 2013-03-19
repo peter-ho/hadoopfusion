@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -20,20 +21,23 @@ public class FusionKeyMapParser {
 
 	private Map<String, String> fusionKeyMap = new HashMap<String, String>();
 
-	public void initialize(URI[] uris, FileSystem fs) throws IOException {
+	public void initialize(Path[] paths, Configuration conf) throws IOException {
 		String[] keys;
 		FSDataInputStream in = null;
 		BufferedReader br = null;
 		System.out.println("fusion key map building starts");
 
 		String last = null;
-		for (URI uri : uris) {
+		for (Path path : paths) {
 			try {
-				in = new FSDataInputStream(new FileInputStream(new File(uri)));
+				//in = new FSDataInputStream(fs.open(path));
+				FileSystem fsLocal = FileSystem.getLocal(conf);
+				in = new FSDataInputStream(fsLocal.open(path));
 				br = new BufferedReader(new InputStreamReader(in));
 
 				String line = br.readLine();
-				if (uri.getPath().indexOf("fusionkey") > 0) {		
+				System.out.println("\tbuilding: " + path.getName() + " - " + line);
+				if (path.getName().indexOf("fusionkey") >= 0) {
 					while (line != null && line.length() > 0 ) {
 						keys = line.split("\t");
 						System.out.println("\tadding " + keys[0] + ", " + keys[1]);
@@ -41,7 +45,7 @@ public class FusionKeyMapParser {
 						// ignore invalid entries without key pairs
 						line = br.readLine();
 					}
-				} else if (uri.getPath().indexOf("remainder") > 0) {
+				} else if (path.getName().indexOf("remainder") >= 0) {
 					while (line != null && line.length() > 0) {
 						if (last == null) last = line;
 						else {

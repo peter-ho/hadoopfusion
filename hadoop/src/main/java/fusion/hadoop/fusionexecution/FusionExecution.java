@@ -1,22 +1,19 @@
 package fusion.hadoop.fusionexecution;
 
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -25,16 +22,21 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
+import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
+
 
 public class FusionExecution {
 	public static class FusionExecutionMapper
 	extends Mapper<LongWritable, Text, Text, IntWritable> {
 		private Text word = new Text();
 		private final static IntWritable one = new IntWritable(1);
-
+		protected FusionKeyMapParser km = new FusionKeyMapParser();		
+		
 		@Override
-		protected void setup(Context context) {
-			
+		protected void setup(Context context) throws IOException {
+			Configuration conf = new Configuration();
+			Path[] paths = context.getLocalCacheFiles();
+			km.initialize(paths, conf);
 		}
 		
 		@Override
@@ -50,7 +52,7 @@ public class FusionExecution {
 	}
 
 	public static class FusionExecutionReducer
-	extends Reducer<Text, NullWritable, Text, Text> {
+	extends Reducer<Text, IntWritable, Text, Text> {
 
 		private Text last = new Text();
 		private MultipleOutputs<Text, Text> multipleOutputs;
@@ -63,7 +65,7 @@ public class FusionExecution {
 		}
 		
 		@Override
-		public void reduce(Text key, Iterable<NullWritable> values,
+		public void reduce(Text key, Iterable<IntWritable> values,
 				Context context)
 						throws IOException, InterruptedException {
 			if (lastConsumed) {
@@ -90,7 +92,10 @@ public class FusionExecution {
 
 	protected static int executeFusionExecutionJob(String inputPath, String outputPath, String fusionKeyPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		System.out.println("FusionExecutionCreation job begins");
-		Job job = Job.getInstance();
+		Configuration conf = new Configuration();
+		//addFusionKeyCacheFiles(job, fs, fusionKeyPath);
+		addFusionKeyCacheFiles(conf, fs, fusionKeyPath);
+		Job job = Job.getInstance(conf);
 		job.setJarByClass(FusionExecution.class);
 		job.setJobName("FusionExecution");
 
@@ -104,22 +109,24 @@ public class FusionExecution {
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
-		addFusionKeyCacheFiles(job, fs, fusionKeyPath);
 
-		int status = 0;//job.waitForCompletion(true) ? 0 : 1;
+		int status = job.waitForCompletion(true) ? 0 : 1;
 		System.out.println("FusionExecution job ends with status " + status);
 		return status;
 	}
 
-	protected static void addFusionKeyCacheFiles(Job job, FileSystem fs, String fusionKeyPath) throws IOException, URISyntaxException {
+	protected static void addFusionKeyCacheFiles(Configuration job, FileSystem fs, String fusionKeyPath) throws IOException, URISyntaxException {
 		addCacheFiles(job, fs, fusionKeyPath + "/remainder-r-*");
 		addCacheFiles(job, fs, fusionKeyPath + "/fusionkey-r-*");
 	}
 
-	protected static void addCacheFiles(Job job, FileSystem fs, String pattern) throws IOException, URISyntaxException {
+	protected static void addCacheFiles(Configuration conf, FileSystem fs, String pattern) throws IOException, URISyntaxException {
 		FileStatus[] fss = fs.globStatus(new Path(pattern));
+		//ArrayList<URI> uris = new ArrayList<URI>();
 		for (FileStatus fst : fss) {
-			job.addCacheFile(new URI(fst.getPath().toString()));
+			//job.addCacheFile(new URI(fst.getPath().toString()));
+			//uris.add(fst.getPath().toUri());
+			DistributedCache.addCacheFile(fst.getPath().toUri(), conf);
 			System.out.println("\tadding cache path: " + fst.getPath().toString());
 		}
 	}
