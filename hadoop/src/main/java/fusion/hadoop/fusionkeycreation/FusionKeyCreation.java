@@ -100,60 +100,53 @@ public class FusionKeyCreation {
 		System.out.println("FusionKeyCreation job ends with status " + status);
 		return status;
 	}
-	
-//	public static ArrayList<String[]> parseRemainderFiles(String outputPath, String tempOutputPath, FileSystem fs) throws IOException {
-//		ArrayList<String[]> remainderKeys = new ArrayList<String[]>();
-//		String[] keys;
-//		System.out.println("Handle remainder starts");
-//		FileStatus[] fss = fs.globStatus(new Path(tempOutputPath + "/remainder-r-*"));
-//		String last = null;
-//		for (FileStatus fst : fss) {
-//			FSDataInputStream in = fs.open(fst.getPath());
-//			String line = in.readLine();
-//			while (line != null) {
-//				if (last == null) last = line;
-//				else {
-//					remainderKeys.add(new String[] { line, last});
-//					last = null;
-//				}
-//				line = in.readLine();
-//			}
-//			in.close();
-//		}
-//		if (last != null) remainderKeys.add(new String[] { last });
-//		System.out.println("Handle remainder ends");
-//		return remainderKeys;
-//	}
-//	
-//	protected static void saveRemainder(ArrayList<String[]> remainders, FileSystem fs, String tempOutputPath) throws IOException {
-//		if (remainders.size() > 0) {
-//			FSDataOutputStream outputStrm = fs.append(new Path(tempOutputPath + "/fusionkey-r-00000" ));
-//			for (String[] keys : remainders) {
-//				if (keys.length > 1) {
-//					outputStrm.writeChars(keys[0]);
-//					outputStrm.write('\t');
-//					outputStrm.writeChars(keys[1]);
-//					outputStrm.write('\r');
-//					outputStrm.write('\n');
-//					outputStrm.writeChars(keys[1]);
-//					outputStrm.write('\t');
-//					outputStrm.writeChars(keys[0]);
-//					outputStrm.write('\r');
-//					outputStrm.write('\n');
-//				} else {
-//					outputStrm.writeChars(keys[0]);
-//					outputStrm.write('\r');
-//					outputStrm.write('\n');
-//				}
-//			}
-//			outputStrm.close();
-//		}
-//	}
 
-//	protected static void moveToOutput(FileSystem fs, String tempOutputPath, String outputPath) throws IOException {
-//		/// TODO: fix moving
-//		fs.rename(new Path(tempOutputPath + "/fusionkey-r-*"), new Path(outputPath + "/fusionkey-r-*"));
-//	}
+	public static ArrayList<String[]> parseRemainderFiles(String outputPath, FileSystem fs) throws IOException {
+		ArrayList<String[]> remainderKeys = new ArrayList<String[]>();
+		String[] keys;
+		System.out.println("Handle remainder starts");
+		FileStatus[] fss = fs.globStatus(new Path(outputPath + "/remainder-r-*"));
+		String last = null;
+		for (FileStatus fst : fss) {
+			FSDataInputStream in = fs.open(fst.getPath());
+			String line = in.readLine();
+			while (line != null) {
+				if (last == null) last = line;
+				else {
+					remainderKeys.add(new String[] { line, last});
+					last = null;
+				}
+				line = in.readLine();
+			}
+			in.close();
+		}
+		if (last != null) remainderKeys.add(new String[] { last });
+		System.out.println("Handle remainder ends");
+		return remainderKeys;
+	}
+	
+	protected static void saveRemainder(ArrayList<String[]> remainders, FileSystem fs, String outputPath) throws IOException {
+		if (remainders.size() > 0) {
+			System.out.println("Save remainder starts");
+			FSDataOutputStream outputStrm = fs.append(new Path(outputPath + "/fusionkey-r-00000" ));
+			for (String[] keys : remainders) {
+				System.out.println("\tStart writing remainder " + keys[0]);
+				if (keys.length > 1) {
+					outputStrm.writeChars(keys[0]);
+					outputStrm.write('\t');
+					outputStrm.writeChars(keys[1]);
+					outputStrm.write('\r');
+					outputStrm.write('\n');
+				} else {
+					outputStrm.writeChars(keys[0]);
+					outputStrm.write('\r');
+					outputStrm.write('\n');
+				}
+			}
+			outputStrm.close();
+			System.out.println("Save remainder starts");
+		}
+	}
 	
 	public static int main(String inputPath, String outputPath) throws IOException, InterruptedException, ClassNotFoundException
 	{
@@ -169,10 +162,8 @@ public class FusionKeyCreation {
 		
 		if (status == 0) {
 			/// handle remainder
-			//ArrayList<String[]> remainders = parseRemainderFiles(outputPath, tempOutputPath, fs);
-			//saveRemainder(remainders, fs, tempOutputPath);
-			/// move actual output to output path
-			//moveToOutput(fs, tempOutputPath, outputPath);
+			ArrayList<String[]> remainders = parseRemainderFiles(outputPath, fs);
+			saveRemainder(remainders, fs, outputPath);
 		}
 		return status;
 	}

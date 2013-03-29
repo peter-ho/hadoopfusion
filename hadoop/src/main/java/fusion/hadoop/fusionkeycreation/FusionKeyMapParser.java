@@ -25,9 +25,10 @@ public class FusionKeyMapParser {
 		String[] keys;
 		FSDataInputStream in = null;
 		BufferedReader br = null;
+//		HashMap<String, String> remainderMap = new HashMap<String, String>();
 		System.out.println("fusion key map building starts");
 
-		String last = null;
+//		String last = null;
 		for (Path path : paths) {
 			try {
 				//in = new FSDataInputStream(fs.open(path));
@@ -41,23 +42,28 @@ public class FusionKeyMapParser {
 					while (line != null && line.length() > 0 ) {
 						keys = line.split("\t");
 						System.out.println("\tadding " + keys[0] + ", " + keys[1]);
-						if (keys.length > 1) fusionKeyMap.put(keys[0], keys[1]);
-						// ignore invalid entries without key pairs
-						line = br.readLine();
-					}
-				} else if (path.getName().indexOf("remainder") >= 0) {
-					while (line != null && line.length() > 0) {
-						if (last == null) last = line;
-						else {
-							System.out.println("\tadding " + line + ", " + last);
-							fusionKeyMap.put(line, last);
-							fusionKeyMap.put(last, line);
-							last = null;
+						if (keys.length > 1) {
+							fusionKeyMap.put(keys[0], keys[1]);
+							fusionKeyMap.put(keys[1], keys[0]);
 						}
 						// ignore invalid entries without key pairs
 						line = br.readLine();
 					}
-				}
+				} 
+//				else if (path.getName().indexOf("remainder") >= 0) {
+//					while (line != null && line.length() > 0) {
+//						if (last == null) last = line;
+//						else {
+//							System.out.println("\tadding " + line + ", " + last);
+//							fusionKeyMap.put(line, last);
+//							fusionKeyMap.put(last, line);
+//							remainderMap.put(line, last);
+//							last = null;
+//						}
+//						// ignore invalid entries without key pairs
+//						line = br.readLine();
+//					}
+//				}
 			} finally {
 				if (br != null) IOUtils.closeStream(br);
 				if (in != null) IOUtils.closeStream(in);
@@ -72,6 +78,16 @@ public class FusionKeyMapParser {
 			return fusionKeyMap.get(key);
 		} else
 			return null;
+	}
+	
+	public String getFusedKey(String key) {
+		String otherKey = fusionKeyMap.get(key);
+		String fusedKey = null;
+		if (otherKey != null) {
+			if (otherKey.compareTo(key) > 0) fusedKey = key.concat(otherKey);
+			else fusedKey = otherKey.concat(key);
+		} 
+		return fusedKey;
 	}
 
 	public Map<String, String> getFusionKeyMap() {

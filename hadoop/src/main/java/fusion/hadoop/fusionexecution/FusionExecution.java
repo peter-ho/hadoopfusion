@@ -22,15 +22,18 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
+import fusion.hadoop.TextPair;
 import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
 
 
 public class FusionExecution {
 	public static class FusionExecutionMapper
-	extends Mapper<LongWritable, Text, Text, IntWritable> {
+	extends Mapper<LongWritable, Text, TextPair, IntWritable> {
 		private Text word = new Text();
 		private final static IntWritable one = new IntWritable(1);
-		protected FusionKeyMapParser km = new FusionKeyMapParser();		
+		protected FusionKeyMapParser km = new FusionKeyMapParser();
+		protected TextPair keyPairRaw = new TextPair(), keyPairFused = new TextPair();
+		protected String empty = "";
 		
 		@Override
 		protected void setup(Context context) throws IOException {
@@ -43,45 +46,71 @@ public class FusionExecution {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			// TODO: invoke input map class map method
+			for (String mapKey : inputMap(key, value)) {
+				keyPairRaw.set(mapKey, empty);
+				context.write(keyPairRaw, one);
+				//km.assignFusedTextPair(mapKey, keyPairFused);
+				context.write(keyPairFused, one);
+//				if (fusedKey != null) {
+//					context.write(new Text("f" + fusedKey), one);
+//				} else {
+//					/// when there is no fused key for a key, this key is duplicated by adding an f
+//					context.write(new Text("f" + word.toString()), one);
+//				}
+			}
+		}
+		
+		protected Iterable<String> inputMap(LongWritable key, Text value) {
+			ArrayList<String> keys = new ArrayList<String>();
 			StringTokenizer tokenizer = new StringTokenizer(value.toString());
 			while (tokenizer.hasMoreTokens()) {
-				word.set(tokenizer.nextToken());
-				context.write(word, one);
+				keys.add(tokenizer.nextToken());
 			}
+			return keys;
+		}
+		
+		protected IntWritable inputMapWrite(Text key) {
+			return one;
 		}
 	}
 
 	public static class FusionExecutionReducer
-	extends Reducer<Text, IntWritable, Text, Text> {
+	extends Reducer<Text, IntWritable, Text, IntWritable> {
 
 		private Text last = new Text();
-		private MultipleOutputs<Text, Text> multipleOutputs;
-		private boolean lastConsumed = true;
+		private MultipleOutputs<Text, IntWritable> multipleOutputs;
 		
 		@Override
 		protected void setup(Context context)
 				throws IOException, InterruptedException {
-			multipleOutputs = new MultipleOutputs<Text, Text>(context);
+			multipleOutputs = new MultipleOutputs<Text, IntWritable>(context);
 		}
 		
 		@Override
 		public void reduce(Text key, Iterable<IntWritable> values,
 				Context context)
 						throws IOException, InterruptedException {
-			if (lastConsumed) {
-				last.set(key);
-				lastConsumed = false;
+			String keyString = key.toString();
+			Text actualKey = new Text(keyString.substring(1));
+			if (keyString.charAt(0) == 'f') {
+				/// write to fused key result
+				multipleOutputs.write(actualKey, inputReduce(actualKey, values), "fused_result");
 			} else {
-				lastConsumed = true;
-				//context.write(key, new Text(last));
-				multipleOutputs.write(key, new Text(last), "fusionkey");
+				multipleOutputs.write(actualKey, inputReduce(actualKey, values), "result");
 			}
+		}
+		
+		protected IntWritable inputReduce(Text key, Iterable<IntWritable> values) {
+			int sum = 0;
+			for (IntWritable value : values) {
+				sum += value.get();
+			}
+			return new IntWritable(sum);
 		}
 		
 		@Override
 		protected void cleanup(Context context)
 				throws IOException, InterruptedException {
-			if (!lastConsumed) multipleOutputs.write(new Text(last), new Text(""), "remainder");			
 			multipleOutputs.close();
 		}
 	}
@@ -105,7 +134,7 @@ public class FusionExecution {
 		job.setMapperClass(FusionExecutionMapper.class);
 		job.setReducerClass(FusionExecutionReducer.class);
 
-		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputKeyClass(TextPair.class);
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
@@ -116,7 +145,6 @@ public class FusionExecution {
 	}
 
 	protected static void addFusionKeyCacheFiles(Configuration job, FileSystem fs, String fusionKeyPath) throws IOException, URISyntaxException {
-		addCacheFiles(job, fs, fusionKeyPath + "/remainder-r-*");
 		addCacheFiles(job, fs, fusionKeyPath + "/fusionkey-r-*");
 	}
 
