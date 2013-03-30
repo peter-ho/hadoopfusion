@@ -34,7 +34,9 @@ public class MissedKeySearch {
 				throws IOException, InterruptedException {
 			
 			String[] keys = value.toString().split("\t");
+			//System.out.println("\tEmptyTextMapper:" + value.toString() + "\t" + keys.length);
 			if (keys.length > 0) {
+				System.out.println("\tEmptyTextMapper -- " + keys[0] + "\t " + keys[0].length());
 				word.set(keys[0]);
 				context.write(word, emptyText);
 			}
@@ -51,16 +53,17 @@ public class MissedKeySearch {
 				throws IOException, InterruptedException {
 			
 			String[] keys = value.toString().split("\t");
-			if (keys.length > 0) {
+			if (keys.length > 1) {
 				key1.set(keys[0]);
-				value1.set("R" + keys[1]);
+				value1.set(keys[1]);
 				key2.set(keys[1]);
-				value2.set("R" + keys[0]);
+				value2.set(keys[0]);
 				context.write(key1, value1);
 				context.write(key2, value2);
 			} else {
+				System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
 				key1.set(keys[0]);
-				value1.set("S" + keys[0]);
+				value1.set(keys[0]);
 				context.write(key1, value1);
 			}
 		}
@@ -80,10 +83,12 @@ public class MissedKeySearch {
 			for (Text value : values) {
 				String keyString = value.toString();
 				if (keyString.length() == 0) emptyExists = true;
-				else recoveryKey = keyString.substring(1);
+				else recoveryKey = keyString;
+				System.out.println("\t\tMissedKeySearchReducer: " + key + "\t" + value);
 			}
 			
 			if (!emptyExists && recoveryKey != null) {
+				System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
 				/// keys missing in result
 				recoveryKeyText.set(recoveryKey);
 				context.write(recoveryKeyText, key);
@@ -98,26 +103,26 @@ public class MissedKeySearch {
 	
 	protected static int executeMissedKeySearchJob(String resultPath, String fusedKeyPath, String outputPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException {
 
-		System.out.println("FusionKeyCreation job begins");
+		System.out.println("MissedKeySearch job begins");
 		Job job = Job.getInstance();
 		job.setJarByClass(FusionKeyCreation.class);
-		job.setJobName("FusionKeyCreation");
+		job.setJobName("MissedKeySearch");
 
 		//FileInputFormat.addInputPath(job, new Path(inputPath));
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
-
+		
 		MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, EmptyTextMapper.class);
 		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, keyPairMapper.class);
 		//job.setMapperClass(MissedKeySearchMapper.class);
 		job.setReducerClass(MissedKeySearchReducer.class);
 
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(NullWritable.class);
+		job.setOutputValueClass(Text.class);
 
 		int status = job.waitForCompletion(true) ? 0 : 1;
-		System.out.println("FusionKeyCreation job ends with status " + status);
+		System.out.println("MissedKeySearch job ends with status " + status);
 		return status;
 	}
 	

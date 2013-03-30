@@ -49,14 +49,8 @@ public class FusionExecution {
 			for (String mapKey : inputMap(key, value)) {
 				keyPairRaw.set(mapKey, empty);
 				context.write(keyPairRaw, one);
-				//km.assignFusedTextPair(mapKey, keyPairFused);
+				km.assignFusedTextPair(mapKey, keyPairFused, empty);
 				context.write(keyPairFused, one);
-//				if (fusedKey != null) {
-//					context.write(new Text("f" + fusedKey), one);
-//				} else {
-//					/// when there is no fused key for a key, this key is duplicated by adding an f
-//					context.write(new Text("f" + word.toString()), one);
-//				}
 			}
 		}
 		
@@ -75,9 +69,9 @@ public class FusionExecution {
 	}
 
 	public static class FusionExecutionReducer
-	extends Reducer<Text, IntWritable, Text, IntWritable> {
+	extends Reducer<TextPair, IntWritable, Text, IntWritable> {
 
-		private Text last = new Text();
+		private Text fusedKey = new Text();
 		private MultipleOutputs<Text, IntWritable> multipleOutputs;
 		
 		@Override
@@ -87,25 +81,41 @@ public class FusionExecution {
 		}
 		
 		@Override
-		public void reduce(Text key, Iterable<IntWritable> values,
+		public void reduce(TextPair key, Iterable<IntWritable> values,
 				Context context)
 						throws IOException, InterruptedException {
-			String keyString = key.toString();
-			Text actualKey = new Text(keyString.substring(1));
-			if (keyString.charAt(0) == 'f') {
-				/// write to fused key result
-				multipleOutputs.write(actualKey, inputReduce(actualKey, values), "fused_result");
+//			String keyString = key.toString();
+//			Text actualKey = new Text(keyString.substring(1));
+			if (key.getSecond().toString().length() == 0) {
+				/// write to raw key result
+				IntWritable value = inputReduce(key.getFirst(), values);
+				if (value != null) multipleOutputs.write(key.getFirst(), value, "result");
 			} else {
-				multipleOutputs.write(actualKey, inputReduce(actualKey, values), "result");
+				fusedKey.set(key.toString());
+				IntWritable value = inputReduce(fusedKey, values);
+				if (value != null) {
+					if (key.getFirst().toString().length() > 0) {
+						multipleOutputs.write(fusedKey, value, "fused_result");
+					} else {
+						/// single key with no other key
+						multipleOutputs.write(key.getSecond(), value, "fused_result");
+					}
+				}
 			}
 		}
 		
 		protected IntWritable inputReduce(Text key, Iterable<IntWritable> values) {
-			int sum = 0;
-			for (IntWritable value : values) {
-				sum += value.get();
+			try {
+				int sum = 0;
+				if (key.toString().compareTo("Hadoop,") == 0) throw new Exception("Fail to reduce.");
+				for (IntWritable value : values) {
+					sum += value.get();
+				}
+				return new IntWritable(sum);
+			} catch (Exception ex) {
+				System.err.println("Error when reducing key: " + key.toString() + "\n\t" + ex.getMessage());
 			}
-			return new IntWritable(sum);
+			return null;
 		}
 		
 		@Override

@@ -130,17 +130,13 @@ public class FusionKeyCreation {
 			System.out.println("Save remainder starts");
 			FSDataOutputStream outputStrm = fs.append(new Path(outputPath + "/fusionkey-r-00000" ));
 			for (String[] keys : remainders) {
-				System.out.println("\tStart writing remainder " + keys[0]);
-				if (keys.length > 1) {
-					outputStrm.writeChars(keys[0]);
-					outputStrm.write('\t');
-					outputStrm.writeChars(keys[1]);
-					outputStrm.write('\r');
-					outputStrm.write('\n');
+				if (keys.length > 1 && keys[1].length() > 0) {
+					System.out.println("\tStart writing remainder " + keys[0] + " (" + keys[0].length() + ") - " + keys[1] + "(" + keys[1].length() + ")");
+					outputStrm.write(Text.encode(keys[0] + '\t').array());
+					outputStrm.write(Text.encode(keys[1] + '\n').array());
 				} else {
-					outputStrm.writeChars(keys[0]);
-					outputStrm.write('\r');
-					outputStrm.write('\n');
+					System.out.println("\tStart writing remainder " + keys[0] + " (" + keys[0].length() + ")");
+					outputStrm.write(Text.encode(keys[0]+'\n').array());
 				}
 			}
 			outputStrm.close();

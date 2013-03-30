@@ -10,6 +10,8 @@ public class TextPair implements WritableComparable<TextPair> {
 	private Text second;
 
 	public TextPair() {
+		first = new Text();
+		second = new Text();
 	}
 
 	public TextPair(Text first, Text second) {
@@ -81,11 +83,11 @@ public class TextPair implements WritableComparable<TextPair> {
 	}
 
 	public int compareTo(TextPair tp) {
-		int cmp = compare(getLower(), tp.getLower());
+		int cmp = compare(first, tp.first);
 		if (cmp != 0) {
 			return cmp;
 		}
-		return compare(getHigher(), tp.getHigher());
+		return compare(second, tp.second);
 	}
 
 }

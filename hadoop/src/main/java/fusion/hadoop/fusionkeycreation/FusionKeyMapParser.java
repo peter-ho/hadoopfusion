@@ -17,6 +17,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
+import fusion.hadoop.TextPair;
+
 public class FusionKeyMapParser {
 
 	private Map<String, String> fusionKeyMap = new HashMap<String, String>();
@@ -41,8 +43,8 @@ public class FusionKeyMapParser {
 				if (path.getName().indexOf("fusionkey") >= 0) {
 					while (line != null && line.length() > 0 ) {
 						keys = line.split("\t");
-						System.out.println("\tadding " + keys[0] + ", " + keys[1]);
 						if (keys.length > 1) {
+							System.out.println("\tadding " + keys[0] + ", " + keys[1]);
 							fusionKeyMap.put(keys[0], keys[1]);
 							fusionKeyMap.put(keys[1], keys[0]);
 						}
@@ -92,5 +94,15 @@ public class FusionKeyMapParser {
 
 	public Map<String, String> getFusionKeyMap() {
 		return Collections.unmodifiableMap(fusionKeyMap);
+	}
+	
+	public void assignFusedTextPair(String key, TextPair textPair, String otherKeyReplacement) {
+		if (fusionKeyMap.containsKey(key)) {
+			String otherKey = fusionKeyMap.get(key);
+			if (key.compareTo(otherKey) < 0) textPair.set(key, otherKey);
+			else textPair.set(otherKey,  key);
+		} else {
+			textPair.set(otherKeyReplacement, key);
+		}
 	}
 }

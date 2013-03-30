@@ -95,7 +95,7 @@ public class WordCountFused
 		//final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
 		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
-		if (status == 0) status = MissedKeySearch.main(executionResultPath, fusionKeyMapPath, missingKeySearchResult);
+		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
 		//if (status == 0) status = 
 		System.exit(status);
 	}
