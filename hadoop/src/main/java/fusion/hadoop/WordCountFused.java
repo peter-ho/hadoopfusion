@@ -16,6 +16,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import fusion.hadoop.defuseMissedKeys.DefuseMissedKeys;
 import fusion.hadoop.fusionexecution.FusionExecution;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
 import fusion.hadoop.missedKeySearch.MissedKeySearch;
@@ -90,13 +91,14 @@ public class WordCountFused
 		
 		final String fusionKeyMapPath =  "hdfs://piccolo.saints.com:8020/user/peter/fusion/FusionKeyMap";
 		final String missingKeySearchResult = "/user/peter/fusion/MissingKeySearchResult";
+		final String missingKeyDefuseResult = "/user/peter/fusion/MissingKeyDefuseResult";
 		final String executionResultPath = args[1];
 		final String inputPath = args[0];
 		//final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
 		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
 		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
-		//if (status == 0) status = 
+		if (status == 0) status = DefuseMissedKeys.main(executionResultPath, fusionKeyMapPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.exit(status);
 	}
 
