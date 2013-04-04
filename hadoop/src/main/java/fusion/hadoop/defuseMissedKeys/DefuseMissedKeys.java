@@ -12,6 +12,7 @@ import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -24,25 +25,28 @@ import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
 
 public class DefuseMissedKeys {
 
-	public static class DefuseMapper1 extends DefuseMapper {
-		public DefuseMapper1() {
-			super(1);
+	private static Class<? extends Writable> VALUE_CLASS = IntWritable.class;
+	public static class DefuseMapper2_1 extends DefuseMapper {
+		public DefuseMapper2_1() {
+			super(2, 1);
 		}
 	}
 	
 	public static class DefuseMapper
-	extends Mapper<LongWritable, Text, Text, ArrayWritable> {
+	extends Mapper<LongWritable, Text, Text, DefuseArrayWritable> {
 		private Text word = new Text();
+		protected int sourceKeyCount = 1;
 		protected int targetIndex = 0;
 
 		private final static IntWritable empty = new IntWritable();
 		protected FusionKeyMapParser km = new FusionKeyMapParser();
 		protected TextPair keyPairRaw = new TextPair(), keyPairFused = new TextPair();
-		protected ArrayWritable values = new ArrayWritable(IntWritable.class);
+		protected DefuseArrayWritable values = new DefuseArrayWritable();
 		
-		public DefuseMapper(int targetIndex) {
+		public DefuseMapper(int sourceKeyCount, int targetIndex) {
 			super();
 			this.targetIndex = targetIndex; 
+			this.sourceKeyCount = sourceKeyCount;
 		}
 		
 		public DefuseMapper() {
@@ -67,30 +71,33 @@ public class DefuseMissedKeys {
 				valueArray[i] = new IntWritable();
 				++i;
 			}
-			if (keys.length > 1) {
-				String keyString = keys[0];
-				System.out.println("\tEmptyTextMapper -- " + keys[0] + "\t " + keys[0].length());
-				String missingKey = km.getOtherKeyForFusion(keyString);
-				if (missingKey != null) {
-					word.set(keyString);
-					valueArray[targetIndex - 1] = new IntWritable(Integer.parseInt(keys[1]));
-					values.set(valueArray);
-					context.write(word, values);
+			if (keys.length > 1 && keys.length > sourceKeyCount) {
+				String fusedResult = keys[sourceKeyCount];
+				for (i=0; i<sourceKeyCount; ++i) {
+					String keyString = keys[i];
+					System.out.println("\tDefuseMapper(" + targetIndex + ")-- " + keys[i] + "\t " + keys[i].length());
+					String missingKey = km.getOtherKeyForFusion(keyString);
+					if (missingKey != null) {
+						word.set(missingKey);
+						valueArray[targetIndex] = new IntWritable(Integer.parseInt(fusedResult));
+						values.set(valueArray);
+						context.write(word, values);
+					}
 				}
 			}
 		}
 	}
 	
 	public static class DefuseReducer
-	extends Reducer<Text, ArrayWritable, Text, IntWritable> {
+	extends Reducer<Text, DefuseArrayWritable, Text, IntWritable> {
 		
 		@Override
-		public void reduce(Text key, Iterable<ArrayWritable> values,
+		public void reduce(Text key, Iterable<DefuseArrayWritable> values,
 				Context context)
 						throws IOException, InterruptedException {
 			IntWritable fusedResult = null;
 			IntWritable recoveryResult = null;
-			for (ArrayWritable value : values) {
+			for (DefuseArrayWritable value : values) {
 				if (value.get().length > 1) fusedResult = (IntWritable) value.get()[1];
 				else recoveryResult = (IntWritable) value.get()[0];
 				System.out.println("\t\tDefuseReducer: " + key + "\t" + value);
@@ -102,6 +109,12 @@ public class DefuseMissedKeys {
 				context.write(key, Defuse(fusedResult, recoveryResult));
 			}
 		}
+	}
+	
+	public static class DefuseArrayWritable extends ArrayWritable {
+		public DefuseArrayWritable() {
+			super(VALUE_CLASS);
+		}		
 	}
 	
 	public static IntWritable Defuse(IntWritable fusedResult, IntWritable recoveryResult) {
@@ -124,23 +137,23 @@ public class DefuseMissedKeys {
 		}
 	}
 	
-	protected static int executeDefuseMissedKeysJob(String resultPath, String fusedKeyPath, String missingKeyPath, String missingKeyResultPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
+	protected static int executeDefuseMissedKeysJob(String resultPath, String fusedResultPath, String missingKeyPath, String missingKeyResultPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 
 		System.out.println("DefuseMissedKey job begins");
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance();
+		addMissedKeyCacheFiles(conf, fs, missingKeyPath);
+		Job job = Job.getInstance(conf);
 		job.setJarByClass(DefuseMissedKeys.class);
 		job.setJobName("DefuseMissedKey");
-		addMissedKeyCacheFiles(conf, fs, missingKeyPath);
 		FileOutputFormat.setOutputPath(job, new Path(missingKeyResultPath));
 		
 		//MultipleInputs.addInputPath(job, new Path(missingKeyPath), TextInputFormat.class, keyPairMapper.class);
 		MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, DefuseMapper.class);
-		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, DefuseMapper1.class);
+		MultipleInputs.addInputPath(job, new Path(fusedResultPath), TextInputFormat.class, DefuseMapper2_1.class);
 		job.setReducerClass(DefuseReducer.class);
 
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(ArrayWritable.class);
+		job.setMapOutputValueClass(DefuseArrayWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
 
@@ -149,7 +162,7 @@ public class DefuseMissedKeys {
 		return status;
 	}
 	
-	public static int main(String resultPath, String fusedKeyPath, String missingKeyPath, String missingKeyResultPath) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
+	public static int main(String resultPath, String fusedResultPath, String missingKeyPath, String missingKeyResultPath) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
 	{
 		Configuration conf = new Configuration();
 		// configuration should contain reference to your namenode
@@ -157,7 +170,7 @@ public class DefuseMissedKeys {
 		// true stands for recursively deleting the folder you gave
 		fs.delete(new Path(missingKeyResultPath), true);
 
-		int status = executeDefuseMissedKeysJob(resultPath, fusedKeyPath, missingKeyPath, missingKeyResultPath, fs);
+		int status = executeDefuseMissedKeysJob(resultPath, fusedResultPath, missingKeyPath, missingKeyResultPath, fs);
 		
 		return status;
 	}

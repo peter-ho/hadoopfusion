@@ -25,7 +25,7 @@
 	    <groupId>jdk.tools</groupId>
 	    <artifactId>jdk.tools</artifactId>
     	<scope>system</scope>
-    	<systemPath>C:\Program Files\Java\jdk1.6.0_34\lib\tools.jar</systemPath>
+    	<systemPath>m:\Program Files\Java\jdk1.6.0_43\lib\tools.jar</systemPath>
     	<version>1.6</version>
     </dependency>
     <dependency>

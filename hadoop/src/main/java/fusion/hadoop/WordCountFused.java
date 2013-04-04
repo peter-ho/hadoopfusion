@@ -98,7 +98,7 @@ public class WordCountFused
 		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
 		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
-		if (status == 0) status = DefuseMissedKeys.main(executionResultPath, fusionKeyMapPath, missingKeySearchResult, missingKeyDefuseResult);
+		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.exit(status);
 	}
 

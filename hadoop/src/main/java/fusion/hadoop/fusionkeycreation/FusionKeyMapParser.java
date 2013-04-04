@@ -40,7 +40,7 @@ public class FusionKeyMapParser {
 
 				String line = br.readLine();
 				System.out.println("\tbuilding: " + path.getName() + " - " + line);
-				if (path.getName().indexOf("fusionkey") >= 0) {
+				//if (path.getName().indexOf("fusionkey") >= 0) {
 					while (line != null && line.length() > 0 ) {
 						keys = line.split("\t");
 						if (keys.length > 1) {
@@ -51,7 +51,7 @@ public class FusionKeyMapParser {
 						// ignore invalid entries without key pairs
 						line = br.readLine();
 					}
-				} 
+				//} 
 //				else if (path.getName().indexOf("remainder") >= 0) {
 //					while (line != null && line.length() > 0) {
 //						if (last == null) last = line;
