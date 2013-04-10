@@ -148,6 +148,7 @@ public class FusionExecution {
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
+		//job.setMaxReduceAttempts(1);	/// reduce retry execution to 1, relying on fusion for fault tolerance
 
 		int status = job.waitForCompletion(true) ? 0 : 1;
 		System.out.println("FusionExecution job ends with status " + status);

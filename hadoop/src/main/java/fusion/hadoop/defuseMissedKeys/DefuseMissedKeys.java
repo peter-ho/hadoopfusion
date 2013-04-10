@@ -127,38 +127,46 @@ public class DefuseMissedKeys {
 		main(args[0], args[1], args[2], args[3]);
 	}
 
-	protected static void addMissedKeyCacheFiles(Configuration job, FileSystem fs, String missingKeyPath) throws IOException, URISyntaxException {
+	protected static int addMissedKeyCacheFiles(Configuration job, FileSystem fs, String missingKeyPath) throws IOException, URISyntaxException {
 		String pattern = missingKeyPath + "/part-r-*";
+		int fileCount = 0;
 
 		FileStatus[] fss = fs.globStatus(new Path(pattern));
 		for (FileStatus fst : fss) {
-			DistributedCache.addCacheFile(fst.getPath().toUri(), job);
-			System.out.println("\tadding cache path: " + fst.getPath().toString());
+			if (fst.getLen() > 0) {
+				DistributedCache.addCacheFile(fst.getPath().toUri(), job);
+				System.out.println("\tadding cache path: " + fst.getPath().toString());
+				++fileCount;
+			}
 		}
+		return fileCount;
 	}
 	
 	protected static int executeDefuseMissedKeysJob(String resultPath, String fusedResultPath, String missingKeyPath, String missingKeyResultPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
-
+		int status = 0;
 		System.out.println("DefuseMissedKey job begins");
 		Configuration conf = new Configuration();
-		addMissedKeyCacheFiles(conf, fs, missingKeyPath);
-		Job job = Job.getInstance(conf);
-		job.setJarByClass(DefuseMissedKeys.class);
-		job.setJobName("DefuseMissedKey");
-		FileOutputFormat.setOutputPath(job, new Path(missingKeyResultPath));
-		
-		//MultipleInputs.addInputPath(job, new Path(missingKeyPath), TextInputFormat.class, keyPairMapper.class);
-		MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, DefuseMapper.class);
-		MultipleInputs.addInputPath(job, new Path(fusedResultPath), TextInputFormat.class, DefuseMapper2_1.class);
-		job.setReducerClass(DefuseReducer.class);
-
-		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(DefuseArrayWritable.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(IntWritable.class);
-
-		int status = job.waitForCompletion(true) ? 0 : 1;
-		System.out.println("DefuseMissedKey job ends with status " + status);
+		if (addMissedKeyCacheFiles(conf, fs, missingKeyPath) > 0) {
+			Job job = Job.getInstance(conf);
+			job.setJarByClass(DefuseMissedKeys.class);
+			job.setJobName("DefuseMissedKey");
+			FileOutputFormat.setOutputPath(job, new Path(missingKeyResultPath));
+			
+			//MultipleInputs.addInputPath(job, new Path(missingKeyPath), TextInputFormat.class, keyPairMapper.class);
+			MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, DefuseMapper.class);
+			MultipleInputs.addInputPath(job, new Path(fusedResultPath), TextInputFormat.class, DefuseMapper2_1.class);
+			job.setReducerClass(DefuseReducer.class);
+	
+			job.setMapOutputKeyClass(Text.class);
+			job.setMapOutputValueClass(DefuseArrayWritable.class);
+			job.setOutputKeyClass(Text.class);
+			job.setOutputValueClass(IntWritable.class);
+	
+			status = job.waitForCompletion(true) ? 0 : 1;
+			System.out.println("DefuseMissedKey job ends with status " + status);
+		} else {
+			System.out.println("DefuseMissedKey job skipped due to empty missed key files.");
+		}
 		return status;
 	}
 	

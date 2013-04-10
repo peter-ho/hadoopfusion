@@ -2,6 +2,7 @@ package fusion.hadoop;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Date;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.Path;
@@ -83,22 +84,31 @@ public class WordCountFused
 	
 	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
 	{
+		System.out.println("\n*** WordCountFusion start...");
 		if (args.length != 2) 
 		{
-			System.err.println("Usage: WordCount <input path> <output path>");
+			System.err.println("Usage:: WordCount <input path> <output path>");
 			System.exit(-1);
 		}
-		
-		final String fusionKeyMapPath =  "hdfs://piccolo.saints.com:8020/user/peter/fusion/FusionKeyMap";
+		long msStart = System.currentTimeMillis();
+		final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
 		final String missingKeySearchResult = "/user/peter/fusion/MissingKeySearchResult";
 		final String missingKeyDefuseResult = "/user/peter/fusion/MissingKeyDefuseResult";
 		final String executionResultPath = args[1];
 		final String inputPath = args[0];
 		//final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
+		
+		long msTemp = System.currentTimeMillis();
 		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
+		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
+		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
+		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
+		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
+		long msEnd = System.currentTimeMillis();
+		System.out.println("\n*** Total elapsed: " + (msEnd - msStart) + "ms");
 		System.exit(status);
 	}
 
