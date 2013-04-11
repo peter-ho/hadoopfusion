@@ -51,6 +51,8 @@ public class WordCount
 
 	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
 	{
+		System.out.println("\n*** WordCount start...");
+		long msStart = System.currentTimeMillis();
 		if (args.length != 2) 
 		{
 			System.err.println("Usage: WordCount <input path> <output path>");
@@ -69,7 +71,10 @@ public class WordCount
 
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
-
-		System.exit(job.waitForCompletion(true) ? 0 : 1);
+		
+		boolean result = job.waitForCompletion(true);
+		long msEnd = System.currentTimeMillis();
+		System.out.println("\n*** Total elapsed: " + (msEnd - msStart) + "ms");
+		System.exit(result ? 0 : 1);
 	}
 }

@@ -36,7 +36,7 @@ public class MissedKeySearch {
 			String[] keys = value.toString().split("\t");
 			//System.out.println("\tEmptyTextMapper:" + value.toString() + "\t" + keys.length);
 			if (keys.length > 0) {
-				System.out.println("\tEmptyTextMapper -- " + keys[0] + "\t " + keys[0].length());
+				//System.out.println("\tEmptyTextMapper -- " + keys[0] + "\t " + keys[0].length());
 				word.set(keys[0]);
 				context.write(word, emptyText);
 			}
@@ -61,7 +61,7 @@ public class MissedKeySearch {
 				context.write(key1, value1);
 				context.write(key2, value2);
 			} else {
-				System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
+				//System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
 				key1.set(keys[0]);
 				value1.set(keys[0]);
 				context.write(key1, value1);
@@ -84,11 +84,11 @@ public class MissedKeySearch {
 				String keyString = value.toString();
 				if (keyString.length() == 0) emptyExists = true;
 				else recoveryKey = keyString;
-				System.out.println("\t\tMissedKeySearchReducer: " + key + "\t" + value);
+				//System.out.println("\t\tMissedKeySearchReducer: " + key + "\t" + value);
 			}
 			
 			if (!emptyExists && recoveryKey != null) {
-				System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
+				//System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
 				/// keys missing in result
 				recoveryKeyText.set(recoveryKey);
 				context.write(recoveryKeyText, key);

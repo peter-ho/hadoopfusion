@@ -44,7 +44,7 @@ public class FusionKeyMapParser {
 					while (line != null && line.length() > 0 ) {
 						keys = line.split("\t");
 						if (keys.length > 1) {
-							System.out.println("\tadding " + keys[0] + ", " + keys[1]);
+							// System.out.println("\tadding " + keys[0] + ", " + keys[1]);
 							fusionKeyMap.put(keys[0], keys[1]);
 							fusionKeyMap.put(keys[1], keys[0]);
 						}

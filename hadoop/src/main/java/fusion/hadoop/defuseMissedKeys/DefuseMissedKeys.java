@@ -75,7 +75,7 @@ public class DefuseMissedKeys {
 				String fusedResult = keys[sourceKeyCount];
 				for (i=0; i<sourceKeyCount; ++i) {
 					String keyString = keys[i];
-					System.out.println("\tDefuseMapper(" + targetIndex + ")-- " + keys[i] + "\t " + keys[i].length());
+					//System.out.println("\tDefuseMapper(" + targetIndex + ")-- " + keys[i] + "\t " + keys[i].length());
 					String missingKey = km.getOtherKeyForFusion(keyString);
 					if (missingKey != null) {
 						word.set(missingKey);
