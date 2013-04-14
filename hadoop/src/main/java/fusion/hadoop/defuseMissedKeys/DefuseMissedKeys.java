@@ -21,6 +21,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import fusion.hadoop.TextPair;
+import fusion.hadoop.fusionkeycreation.FusionKeyMap;
 import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
 
 public class DefuseMissedKeys {
@@ -39,7 +40,8 @@ public class DefuseMissedKeys {
 		protected int targetIndex = 0;
 
 		private final static IntWritable empty = new IntWritable();
-		protected FusionKeyMapParser km = new FusionKeyMapParser();
+		protected FusionKeyMapParser km;
+		protected FusionKeyMap fkm;
 		protected TextPair keyPairRaw = new TextPair(), keyPairFused = new TextPair();
 		protected DefuseArrayWritable values = new DefuseArrayWritable();
 		
@@ -57,7 +59,8 @@ public class DefuseMissedKeys {
 		protected void setup(Context context) throws IOException {
 			Configuration conf = new Configuration();
 			Path[] paths = context.getLocalCacheFiles();
-			km.initialize(paths, conf);
+			km = new FusionKeyMapParser(paths, conf);
+			fkm = new FusionKeyMap(km.getFusionKeyMap());
 		}
 
 		@Override
@@ -76,7 +79,7 @@ public class DefuseMissedKeys {
 				for (i=0; i<sourceKeyCount; ++i) {
 					String keyString = keys[i];
 					//System.out.println("\tDefuseMapper(" + targetIndex + ")-- " + keys[i] + "\t " + keys[i].length());
-					String missingKey = km.getOtherKeyForFusion(keyString);
+					String missingKey = fkm.getOtherKeyForFusion(keyString);
 					if (missingKey != null) {
 						word.set(missingKey);
 						valueArray[targetIndex] = new IntWritable(Integer.parseInt(fusedResult));

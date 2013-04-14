@@ -16,6 +16,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileAsTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
@@ -39,6 +40,24 @@ public class MissedKeySearch {
 				//System.out.println("\tEmptyTextMapper -- " + keys[0] + "\t " + keys[0].length());
 				word.set(keys[0]);
 				context.write(word, emptyText);
+			}
+		}
+	}
+	
+	public static class mapFileMapper extends Mapper<Text, Text, Text, Text> {
+		
+		@Override
+		public void map(Text key, Text value, Context context)
+				throws IOException, InterruptedException {
+			Text duplicateKey = new Text();
+			
+			String strValue = value.toString();
+			if (strValue != null && !strValue.isEmpty()) {
+				context.write(key, value);
+			} else {
+				//System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
+				duplicateKey.set(key.toString());
+				context.write(key, duplicateKey);
 			}
 		}
 	}
@@ -112,8 +131,8 @@ public class MissedKeySearch {
 		FileOutputFormat.setOutputPath(job, new Path(outputPath));
 		
 		MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, EmptyTextMapper.class);
-		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, keyPairMapper.class);
-		//job.setMapperClass(MissedKeySearchMapper.class);
+		//MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, keyPairMapper.class);
+		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), SequenceFileAsTextInputFormat.class, mapFileMapper.class);
 		job.setReducerClass(MissedKeySearchReducer.class);
 
 		job.setMapOutputKeyClass(Text.class);

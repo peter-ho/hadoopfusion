@@ -23,7 +23,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
 import fusion.hadoop.TextPair;
+import fusion.hadoop.fusionkeycreation.FusionKeyMap;
 import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
+import fusion.hadoop.fusionkeycreation.MapFileParser;
 
 
 public class FusionExecution {
@@ -31,7 +33,8 @@ public class FusionExecution {
 	extends Mapper<LongWritable, Text, TextPair, IntWritable> {
 		private Text word = new Text();
 		private final static IntWritable one = new IntWritable(1);
-		protected FusionKeyMapParser km = new FusionKeyMapParser();
+		protected FusionKeyMapParser kmp;
+		protected FusionKeyMap fkm;
 		protected TextPair keyPairRaw = new TextPair(), keyPairFused = new TextPair();
 		protected String empty = "";
 		
@@ -39,7 +42,11 @@ public class FusionExecution {
 		protected void setup(Context context) throws IOException {
 			Configuration conf = new Configuration();
 			Path[] paths = context.getLocalCacheFiles();
-			km.initialize(paths, conf);
+//			km.initialize(paths, conf);
+//			km.initializeBySeqFile();
+//			kmp = new FusionKeyMapParser();
+//			fkm = new FusionKeyMap(kmp.getFusionKeyMap());
+			fkm = new FusionKeyMap(new MapFileParser(conf));
 		}
 		
 		@Override
@@ -49,7 +56,7 @@ public class FusionExecution {
 			for (String mapKey : inputMap(key, value)) {
 				keyPairRaw.set(mapKey, empty);
 				context.write(keyPairRaw, one);
-				km.assignFusedTextPair(mapKey, keyPairFused, empty);
+				fkm.assignFusedTextPair(mapKey, keyPairFused, empty);
 				context.write(keyPairFused, one);
 			}
 		}
@@ -107,7 +114,7 @@ public class FusionExecution {
 		protected IntWritable inputReduce(Text key, Iterable<IntWritable> values) {
 			try {
 				int sum = 0;
-				if (key.toString().compareTo("Hadoop,") == 0) throw new Exception("Fail to reduce.");
+				//if (key.toString().compareTo("Hadoop,") == 0) throw new Exception("Fail to reduce.");
 				for (IntWritable value : values) {
 					sum += value.get();
 				}
@@ -129,11 +136,12 @@ public class FusionExecution {
 		main(args[0], args[1], args[2]);
 	}
 
+	protected static String FusionKeyPath;
 	protected static int executeFusionExecutionJob(String inputPath, String outputPath, String fusionKeyPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		System.out.println("FusionExecutionCreation job begins");
+		FusionKeyPath = fusionKeyPath;
 		Configuration conf = new Configuration();
-		//addFusionKeyCacheFiles(job, fs, fusionKeyPath);
-		addFusionKeyCacheFiles(conf, fs, fusionKeyPath);
+		//addFusionKeyCacheFiles(conf, fs, fusionKeyPath);
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(FusionExecution.class);
 		job.setJobName("FusionExecution");

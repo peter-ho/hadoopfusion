@@ -8,6 +8,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
@@ -19,7 +20,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import fusion.hadoop.defuseMissedKeys.DefuseMissedKeys;
 import fusion.hadoop.fusionexecution.FusionExecution;
+import fusion.hadoop.fusionkeycreation.FusionKeyCreateToSeqFile;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
+import fusion.hadoop.fusionkeycreation.MapFileParser;
 import fusion.hadoop.missedKeySearch.MissedKeySearch;
 
 
@@ -99,11 +102,14 @@ public class WordCountFused
 		//final String fusionKeyMapPath =  "/user/peter/fusion/FusionKeyMap";
 		
 		long msTemp = System.currentTimeMillis();
-		int status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
+		int status = 0;
+		//status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
+		status = FusionKeyCreateToSeqFile.main(args[0], fusionKeyMapPath);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
-		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
+		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
+		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/part-r-00000/data", missingKeySearchResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
