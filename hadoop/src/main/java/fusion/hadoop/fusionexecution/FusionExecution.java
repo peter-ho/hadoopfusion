@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -23,6 +24,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
 import fusion.hadoop.TextPair;
+import fusion.hadoop.WordCountFused;
 import fusion.hadoop.fusionkeycreation.FusionKeyMap;
 import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
 import fusion.hadoop.fusionkeycreation.MapFileParser;
@@ -53,22 +55,22 @@ public class FusionExecution {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			// TODO: invoke input map class map method
-			for (String mapKey : inputMap(key, value)) {
-				keyPairRaw.set(mapKey, empty);
+			for (String mapKey : WordCountFused.WordCountMapper.map(value)) {
+				//keyPairRaw.set(mapKey, empty);
+				fkm.assignFusedTextPair(mapKey, empty, keyPairRaw, keyPairFused);
 				context.write(keyPairRaw, one);
-				fkm.assignFusedTextPair(mapKey, keyPairFused, empty);
 				context.write(keyPairFused, one);
 			}
 		}
 		
-		protected Iterable<String> inputMap(LongWritable key, Text value) {
-			ArrayList<String> keys = new ArrayList<String>();
-			StringTokenizer tokenizer = new StringTokenizer(value.toString());
-			while (tokenizer.hasMoreTokens()) {
-				keys.add(tokenizer.nextToken());
-			}
-			return keys;
-		}
+//		protected Iterable<String> inputMap(LongWritable key, Text value) {
+//			ArrayList<String> keys = new ArrayList<String>();
+//			StringTokenizer tokenizer = new StringTokenizer(value.toString());
+//			while (tokenizer.hasMoreTokens()) {
+//				keys.add(tokenizer.nextToken());
+//			}
+//			return keys;
+//		}
 		
 		protected IntWritable inputMapWrite(Text key) {
 			return one;
@@ -97,11 +99,14 @@ public class FusionExecution {
 				/// write to raw key result
 				IntWritable value = inputReduce(key.getFirst(), values);
 				if (value != null) multipleOutputs.write(key.getFirst(), value, "result");
+			} else if (key.getFirst().toString().length() == 0) {
+				IntWritable value = inputReduce(key.getSecond(), values);
+				if (value != null) multipleOutputs.write(key.getSecond(), value, "result");
 			} else {
 				fusedKey.set(key.toString());
 				IntWritable value = inputReduce(fusedKey, values);
 				if (value != null) {
-					if (key.getFirst().toString().length() > 0) {
+					if (key.getFirst().toString().compareTo(key.getSecond().toString()) != 0) {
 						multipleOutputs.write(fusedKey, value, "fused_result");
 					} else {
 						/// single key with no other key
@@ -114,15 +119,36 @@ public class FusionExecution {
 		protected IntWritable inputReduce(Text key, Iterable<IntWritable> values) {
 			try {
 				int sum = 0;
-				//if (key.toString().compareTo("Hadoop,") == 0) throw new Exception("Fail to reduce.");
+				//if (key.toString().compareTo("hadoop") == 0) throw new Exception("Fail to reduce.");
 				for (IntWritable value : values) {
 					sum += value.get();
 				}
+				compute(key, values);
 				return new IntWritable(sum);
 			} catch (Exception ex) {
 				System.err.println("Error when reducing key: " + key.toString() + "\n\t" + ex.getMessage());
 			}
 			return null;
+		}
+		
+		protected void compute(Text key, Iterable<IntWritable> values) {
+			///simulate long running process
+			try {
+				Thread.sleep(2000);
+				double x = Math.random();
+				for (int i=5003; i<70000; ++i) {
+					boolean isPrime = true;
+					for (int j=2; j<i; ++j) {
+						if ((i % j) == 0) {
+							isPrime = false;
+						}
+					}
+					if (isPrime) System.out.println(i);
+				}
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		@Override
@@ -132,15 +158,27 @@ public class FusionExecution {
 		}
 	}
 	
+	public static class Partitioner extends FusionPartitioner {
+		public Partitioner() {
+			super(NUM_OF_REDUCERS);
+		}
+	}
+	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		main(args[0], args[1], args[2]);
 	}
 
+	protected static int NUM_OF_REDUCERS = 3;
 	protected static String FusionKeyPath;
 	protected static int executeFusionExecutionJob(String inputPath, String outputPath, String fusionKeyPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		System.out.println("FusionExecutionCreation job begins");
 		FusionKeyPath = fusionKeyPath;
 		Configuration conf = new Configuration();
+		conf.setInt("mapreduce.reduce.maxattempts", 1);
+		conf.setInt("mapred.reduce.max.attempts", 1);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setInt("mapred.max.reduce.failures.percent", 49);
+		conf.setInt("mapreduce.job.reduces", NUM_OF_REDUCERS);
 		//addFusionKeyCacheFiles(conf, fs, fusionKeyPath);
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(FusionExecution.class);
@@ -151,13 +189,15 @@ public class FusionExecution {
 
 		job.setMapperClass(FusionExecutionMapper.class);
 		job.setReducerClass(FusionExecutionReducer.class);
+		job.setNumReduceTasks(NUM_OF_REDUCERS);
+		job.setPartitionerClass(Partitioner.class);
 
 		job.setMapOutputKeyClass(TextPair.class);
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
 		//job.setMaxReduceAttempts(1);	/// reduce retry execution to 1, relying on fusion for fault tolerance
-
+		
 		int status = job.waitForCompletion(true) ? 0 : 1;
 		System.out.println("FusionExecution job ends with status " + status);
 		return status;

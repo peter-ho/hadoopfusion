@@ -16,7 +16,7 @@ public class FusionKeyMap {
 	
 	public String getOtherKeyForFusion(String key) {
 		String value = fusionKeyMap.get(key);
-		System.out.println("key: " + key + " value: " + value);
+		//System.out.println("key: " + key + " value: " + value);
 		return value;
 //		if (fusionKeyMap.containsKey(key)) {
 //			return fusionKeyMap.get(key);
@@ -38,14 +38,18 @@ public class FusionKeyMap {
 //		return Collections.unmodifiableMap(fusionKeyMap);
 //	}
 	
-	public void assignFusedTextPair(String key, TextPair textPair, String otherKeyReplacement) {
+	public void assignFusedTextPair(String key, String empty, TextPair textPairRaw, TextPair textPairFused) {
 		String otherKey = fusionKeyMap.get(key);
+		
+		if (key.compareTo(otherKey) < 0) textPairRaw.set(key, empty);
+		else textPairRaw.set(empty,  key);
+		
 		if (otherKey != null && !otherKey.isEmpty()) {
-			System.out.println("key: " + key + " value: " + otherKey);
-			if (key.compareTo(otherKey) < 0) textPair.set(key, otherKey);
-			else textPair.set(otherKey,  key);
+			//System.out.println("key: " + key + " value: " + otherKey);
+			if (key.compareTo(otherKey) < 0) textPairFused.set(key, otherKey);
+			else textPairFused.set(otherKey,  key);
 		} else {
-			textPair.set(otherKeyReplacement, key);
+			textPairFused.set(key, key);
 		}
 	}
 }

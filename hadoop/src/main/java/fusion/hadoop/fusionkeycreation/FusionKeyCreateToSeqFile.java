@@ -2,6 +2,7 @@ package fusion.hadoop.fusionkeycreation;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -15,6 +16,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
@@ -23,6 +25,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Progressable;
+
+import fusion.hadoop.WordCountFused;
 
 public class FusionKeyCreateToSeqFile {
 	protected static String JOB_NAME = "FusionKeyCreateToSeqFile";
@@ -37,9 +41,9 @@ public class FusionKeyCreateToSeqFile {
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			StringTokenizer tokenizer = new StringTokenizer(value.toString());
-			while (tokenizer.hasMoreTokens()) {
-				word.set(tokenizer.nextToken());
+			ArrayList<String> tokens = WordCountFused.WordCountMapper.map(value);
+			for (String token : tokens) {
+				word.set(token);
 				context.write(word, NullWritable.get());
 			}
 		}
@@ -48,7 +52,7 @@ public class FusionKeyCreateToSeqFile {
 	public static class FusionKeyReducer extends Reducer<Text, NullWritable, Text, Text> {
 		private Text last = new Text();
 		private boolean lastConsumed = true;
-		
+		protected int count = 0;
 		
 		@Override
 		public void reduce(Text key, Iterable<NullWritable> values,
@@ -61,6 +65,7 @@ public class FusionKeyCreateToSeqFile {
 				lastConsumed = true;
 				context.write(last, key);
 				context.write(key, last);
+				count += 2;
 				//multipleOutputs.write(key, new Text(last), "fusionkey");
 			}
 		}
@@ -68,7 +73,11 @@ public class FusionKeyCreateToSeqFile {
 		@Override
 		protected void cleanup(Context context)
 				throws IOException, InterruptedException {
-			if (!lastConsumed) context.write(last, new Text(""));
+			if (!lastConsumed) {
+				context.write(last, new Text(""));
+				++count;
+			}
+			System.out.println("\t *** key count: " + count);
 		}
 	}
 	
@@ -142,10 +151,11 @@ public class FusionKeyCreateToSeqFile {
 		job.setMapOutputValueClass(NullWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
-		job.setNumReduceTasks(1);
-		//job.setOutputFormatClass(SequenceFileOutputFormat.class);
+		//job.setNumReduceTasks(1);
 		job.setOutputFormatClass(MapFileOutputFormat.class);
-				
+//		MapFileOutputFormat.setCompressOutput(job, true);
+//		MapFileOutputFormat.setOutputCompressorClass(job,GzipCodec.class);
+
 		int status = job.waitForCompletion(true) ? 0 : 1;
 		System.out.println(JOB_NAME + " job ends with status " + status);
 		fs.delete(new Path(outputPath + "/_SUCCESS"), true);

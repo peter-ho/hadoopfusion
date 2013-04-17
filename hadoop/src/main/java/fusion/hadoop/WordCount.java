@@ -25,9 +25,8 @@ public class WordCount
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			StringTokenizer tokenizer = new StringTokenizer(value.toString());
-			while (tokenizer.hasMoreTokens()) {
-				word.set(tokenizer.nextToken());
+			for (String token : WordCountFused.WordCountMapper.map(value)) {
+				word.set(token);
 				context.write(word, one);
 			}
 		}

@@ -2,6 +2,7 @@ package fusion.hadoop;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.StringTokenizer;
 
@@ -42,6 +43,33 @@ public class WordCountFused
 				word.set(tokenizer.nextToken());
 				context.write(word, one);
 			}
+		}
+
+		public static String charsToSkip = " \n\r\t\f~`!@#$%^&*()_-+={}[]|\\\":;'<>,.?/";
+		public static String[] patternsToSkip = {
+			"&amp;",
+			"&lt;",
+			"&quot;",
+			"&gt;",
+			"nbsp;",
+			"dash;",
+		};
+
+		
+		public static ArrayList<String> map(Text value)
+				throws IOException, InterruptedException {
+			String strValue = value.toString();
+			
+			for (String pattern : patternsToSkip) {
+				strValue = strValue.replaceAll(pattern, " ").toLowerCase();
+		    }
+			
+			ArrayList<String> keys = new ArrayList<String>();
+			StringTokenizer tokenizer = new StringTokenizer(strValue, charsToSkip, false);
+			while (tokenizer.hasMoreTokens()) {
+				keys.add(tokenizer.nextToken());
+			}
+			return keys;			
 		}
 	}
 
@@ -109,7 +137,7 @@ public class WordCountFused
 		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
-		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/part-r-00000/data", missingKeySearchResult);
+		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/part-r-*/data", missingKeySearchResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
