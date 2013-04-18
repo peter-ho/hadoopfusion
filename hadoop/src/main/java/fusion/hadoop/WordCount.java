@@ -3,6 +3,7 @@ package fusion.hadoop;
 import java.io.IOException;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -12,6 +13,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import fusion.hadoop.fusionexecution.FusionExecution;
 
 
 // https://ccp.cloudera.com/display/CDH4DOC/Using+the+CDH4+Maven+Repository
@@ -44,6 +47,7 @@ public class WordCount
 			for (IntWritable value : values) {
 				sum += value.get();
 			}
+			FusionExecution.FusionExecutionReducer.compute(key, values);
 			context.write(key, new IntWritable(sum));
 		}
 	}
@@ -58,7 +62,10 @@ public class WordCount
 			System.exit(-1);
 		}
 
-		Job job = Job.getInstance();
+		Configuration conf = new Configuration();
+		conf.setInt("mapreduce.job.reduces", FusionConfiguration.NUM_OF_REDUCERS);
+		
+		Job job = Job.getInstance(conf);
 		job.setJarByClass(WordCount.class);
 		job.setJobName("Word Count");
 
@@ -67,7 +74,8 @@ public class WordCount
 
 		job.setMapperClass(WordCountMapper.class);
 		job.setReducerClass(WordCountReducer.class);
-
+		job.setNumReduceTasks(FusionConfiguration.NUM_OF_REDUCERS);
+		
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
 		

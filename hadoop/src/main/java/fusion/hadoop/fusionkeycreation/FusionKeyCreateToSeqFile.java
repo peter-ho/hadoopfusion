@@ -64,7 +64,7 @@ public class FusionKeyCreateToSeqFile {
 			} else {
 				lastConsumed = true;
 				context.write(last, key);
-				context.write(key, last);
+				//context.write(key, last);
 				count += 2;
 				//multipleOutputs.write(key, new Text(last), "fusionkey");
 			}

@@ -23,6 +23,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
+import fusion.hadoop.FusionConfiguration;
 import fusion.hadoop.TextPair;
 import fusion.hadoop.WordCountFused;
 import fusion.hadoop.fusionkeycreation.FusionKeyMap;
@@ -131,23 +132,19 @@ public class FusionExecution {
 			return null;
 		}
 		
-		protected void compute(Text key, Iterable<IntWritable> values) {
+		public static void compute(Text key, Iterable<IntWritable> values) {
 			///simulate long running process
-			try {
-				Thread.sleep(2000);
-				double x = Math.random();
-				for (int i=5003; i<70000; ++i) {
+			for (int k=0; k<0; ++k) {
+				for (int i=40001; i<50000; ++i) {
 					boolean isPrime = true;
 					for (int j=2; j<i; ++j) {
 						if ((i % j) == 0) {
 							isPrime = false;
+							break;
 						}
 					}
-					if (isPrime) System.out.println(i);
+					if (isPrime) { }
 				}
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		}
 		
@@ -160,7 +157,7 @@ public class FusionExecution {
 	
 	public static class Partitioner extends FusionPartitioner {
 		public Partitioner() {
-			super(NUM_OF_REDUCERS);
+			super(FusionConfiguration.NUM_OF_REDUCERS);
 		}
 	}
 	
@@ -168,7 +165,6 @@ public class FusionExecution {
 		main(args[0], args[1], args[2]);
 	}
 
-	protected static int NUM_OF_REDUCERS = 3;
 	protected static String FusionKeyPath;
 	protected static int executeFusionExecutionJob(String inputPath, String outputPath, String fusionKeyPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException {
 		System.out.println("FusionExecutionCreation job begins");
@@ -178,7 +174,7 @@ public class FusionExecution {
 		conf.setInt("mapred.reduce.max.attempts", 1);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		conf.setInt("mapred.max.reduce.failures.percent", 49);
-		conf.setInt("mapreduce.job.reduces", NUM_OF_REDUCERS);
+		conf.setInt("mapreduce.job.reduces", FusionConfiguration.NUM_OF_REDUCERS);
 		//addFusionKeyCacheFiles(conf, fs, fusionKeyPath);
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(FusionExecution.class);
@@ -189,7 +185,8 @@ public class FusionExecution {
 
 		job.setMapperClass(FusionExecutionMapper.class);
 		job.setReducerClass(FusionExecutionReducer.class);
-		job.setNumReduceTasks(NUM_OF_REDUCERS);
+		job.setNumReduceTasks(FusionConfiguration.NUM_OF_REDUCERS);
+		job.setCombinerClass(FusionCombiner.class);
 		job.setPartitionerClass(Partitioner.class);
 
 		job.setMapOutputKeyClass(TextPair.class);

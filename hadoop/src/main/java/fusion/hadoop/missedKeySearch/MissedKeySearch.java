@@ -54,6 +54,7 @@ public class MissedKeySearch {
 			String strValue = value.toString();
 			if (strValue != null && !strValue.isEmpty()) {
 				context.write(key, value);
+				context.write(value, key);
 			} else {
 				//System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
 				duplicateKey.set(key.toString());
