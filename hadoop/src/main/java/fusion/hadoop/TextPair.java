@@ -81,8 +81,41 @@ public class TextPair implements WritableComparable<TextPair> {
 	public static int compare(Text a, Text b) {
 		return a.compareTo(b);
 	}
-
+	
+	public boolean isFirstEmpty() {
+		String strFirst = first.toString();
+		return strFirst == null || strFirst.isEmpty();
+	}
+	
+	public boolean isSecondEmpty() { 
+		String strSecond = second.toString();
+		return strSecond == null || strSecond.isEmpty();
+	}
+	
+	public String getSingleValue() {
+		boolean firstEmpty = isFirstEmpty(), secondEmpty = isSecondEmpty();
+		if (firstEmpty && !secondEmpty) return second.toString();
+		if (!firstEmpty && secondEmpty) return first.toString();
+		return null;
+	}
+	
 	public int compareTo(TextPair tp) {
+		String singleValue = getSingleValue();
+		String otherSingleValue = tp.getSingleValue();
+		if (singleValue != null && otherSingleValue != null) return singleValue.compareTo(otherSingleValue);
+		String higher = getHigher().toString(), lower = getLower().toString();
+		if (singleValue == null && otherSingleValue != null) {
+			if (lower.compareTo(otherSingleValue) < 0) return -1;
+			return 1;
+		}
+		if (singleValue != null && otherSingleValue == null) {
+			if (tp.getHigher().toString().compareTo(singleValue) >= 0) return -1;
+			else return 1;
+		}
+		return compareToBoth(tp);
+	}
+
+	public int compareToBoth(TextPair tp) {
 		int cmp = compare(first, tp.first);
 		if (cmp != 0) {
 			return cmp;

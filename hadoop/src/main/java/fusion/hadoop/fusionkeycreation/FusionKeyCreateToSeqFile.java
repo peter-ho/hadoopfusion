@@ -74,7 +74,7 @@ public class FusionKeyCreateToSeqFile {
 		protected void cleanup(Context context)
 				throws IOException, InterruptedException {
 			if (!lastConsumed) {
-				context.write(last, new Text(""));
+				context.write(last, last);
 				++count;
 			}
 			System.out.println("\t *** key count: " + count);
@@ -113,7 +113,8 @@ public class FusionKeyCreateToSeqFile {
 				//context.write(key, new Text(last));
 				//multipleOutputs.write(key, new Text(last), "fusionkey");
 				try {
-					writer.append(key, last);
+					//writer.append(key, last);
+					writer.append(last, key);
 				} finally {
 					//IOUtils.closeStream(writer);
 				}
@@ -151,7 +152,7 @@ public class FusionKeyCreateToSeqFile {
 		job.setMapOutputValueClass(NullWritable.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
-		//job.setNumReduceTasks(1);
+		job.setNumReduceTasks(1);
 		job.setOutputFormatClass(MapFileOutputFormat.class);
 //		MapFileOutputFormat.setCompressOutput(job, true);
 //		MapFileOutputFormat.setOutputCompressorClass(job,GzipCodec.class);

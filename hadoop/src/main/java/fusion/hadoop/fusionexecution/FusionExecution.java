@@ -57,10 +57,15 @@ public class FusionExecution {
 				throws IOException, InterruptedException {
 			// TODO: invoke input map class map method
 			for (String mapKey : WordCountFused.WordCountMapper.map(value)) {
-				//keyPairRaw.set(mapKey, empty);
-				fkm.assignFusedTextPair(mapKey, empty, keyPairRaw, keyPairFused);
+				////keyPairRaw.set(mapKey, empty);
+//				fkm.assignFusedTextPair(mapKey, empty, keyPairRaw, keyPairFused);
+//				context.write(keyPairRaw, one);
+//				context.write(keyPairFused, one);
+				keyPairRaw.set(mapKey, empty);
 				context.write(keyPairRaw, one);
-				context.write(keyPairFused, one);
+//				keyPairRaw.set(empty, mapKey);
+//				context.write(keyPairRaw, one);
+
 			}
 		}
 		
