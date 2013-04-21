@@ -18,6 +18,7 @@ import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import fusion.hadoop.TextPair;
+import fusion.hadoop.fusionkeycreation.FusionKeyCreation2;
 import fusion.hadoop.fusionkeycreation.MapFileParser;
 
 public class FusionCombiner extends
@@ -27,7 +28,8 @@ public class FusionCombiner extends
 	private MultipleOutputs<Text, IntWritable> multipleOutputs;
 	private Reader reader;
 	Configuration conf;
-	Writable key1, key2;
+	Text key1, key2;
+	FusionKeyCreation2.KeyCreationWritable fusionKeyValue;
 	Text empty;
 	boolean moreData = true;
 	TextPair tp = new TextPair();
@@ -38,20 +40,25 @@ public class FusionCombiner extends
 			throws IOException, InterruptedException {
 		conf = context.getConfiguration();
 		FileSystem fs = FileSystem.get(conf);
-		Path path = new Path (MapFileParser.PATH + "/part-r-00000/data");
+		Path path = new Path (MapFileParser.PATH + "/fusionkey-r-00000");
 		reader = new SequenceFile.Reader(fs, path, context.getConfiguration());
-		key1 = (Writable) ReflectionUtils.newInstance(reader.getKeyClass(), conf);
-		key2 = (Writable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
+		key1 = (Text) ReflectionUtils.newInstance(reader.getKeyClass(), conf);
+		fusionKeyValue = (FusionKeyCreation2.KeyCreationWritable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
 		empty = new Text("");
-		moreData = reader.next(key1, key2);
+		parseNext(reader);
 		System.out.println("  read from key file " + key1.toString() + "\t" + key2.toString());
+	}
+	
+	protected void parseNext(Reader reader) throws IOException {
+		moreData = reader.next(key1, fusionKeyValue);
+		key2 = (Text) fusionKeyValue.get();
 	}
 	
 	@Override
 	public void reduce(TextPair key, Iterable<IntWritable> values,
 			Context context)
 					throws IOException, InterruptedException {
-		String strKey = key.getFirst().toString();
+		String strKey = key.getSingleValue();
 		System.out.println("  combine key: " + strKey);
 		ArrayList<IntWritable> valueCopy = new ArrayList<IntWritable>();
 		for (IntWritable value : values) {
@@ -65,7 +72,7 @@ public class FusionCombiner extends
 					writeToContext(tp, lastValues, context);
 					lastValues = null;
 				}
-				reader.next(key1, key2);
+				parseNext(reader);
 				System.out.println("  read from key file " + key1.toString() + "\t" + key2.toString());
 			}
 			if (strKey.compareTo(key1.toString()) == 0) {
@@ -73,7 +80,6 @@ public class FusionCombiner extends
 				writeToContext(key, valueCopy, context);
 				lastValues = valueCopy;
 			} else if (strKey.compareTo(key2.toString()) == 0) {
-				key.set("", strKey);
 				writeToContext(key, valueCopy, context);
 				if (lastValues != null) {
 					writeToContext(tp, lastValues, context);
@@ -81,7 +87,7 @@ public class FusionCombiner extends
 				}
 				key.set(key1.toString(), key2.toString());
 				writeToContext(key, valueCopy, context);
-				moreData = reader.next(key1, key2);
+				parseNext(reader);
 				System.out.println("  read from key file " + key1.toString() + "\t" + key2.toString());
 			}
 		}

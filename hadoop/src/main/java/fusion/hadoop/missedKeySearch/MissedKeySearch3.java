@@ -10,6 +10,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -22,10 +23,14 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
+import fusion.hadoop.TextPair;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation3;
+import fusion.hadoop.fusionkeycreation.FusionKeyMap;
+import fusion.hadoop.fusionkeycreation.FusionKeyMapParser;
+import fusion.hadoop.fusionkeycreation.FusionKeysWritable;
 
-public class MissedKeySearch {
+public class MissedKeySearch3 {
 
 	public static class EmptyTextMapper
 	extends Mapper<LongWritable, Text, Text, Text> {
@@ -44,27 +49,24 @@ public class MissedKeySearch {
 				context.write(word, emptyText);
 			}
 		}
-	}
+	}	
 	
-	public static class mapFileMapper extends Mapper<Text, FusionKeyCreation3.KeyCreationWritable, Text, Text> {
+	public static class FusionKeyValueMapper
+	extends Mapper<Text, FusionKeyCreation3.KeyCreationWritable, Text, Text> {
 		
-		Text duplicateKey = new Text();
 		@Override
 		public void map(Text key, FusionKeyCreation3.KeyCreationWritable value, Context context)
 				throws IOException, InterruptedException {
-			Text otherKey = (Text) value.get();
-			
-			String strValue = otherKey.toString();
-			if (strValue != null && !strValue.isEmpty()) {
-				context.write(key, otherKey);
-				context.write(otherKey, key);
+			FusionKeysWritable fkw = (FusionKeysWritable) value.get();
+			if (fkw.OtherKey.toString().length() > 0) {
+				context.write(key, fkw.OtherKey);
+				context.write(fkw.OtherKey, key);
 			} else {
-				//System.out.println("\tKeyPairMapper:" + keys[0] + "\t" + keys[0].length());
-				duplicateKey.set(key.toString());
-				context.write(key, duplicateKey);
+				context.write(key, key);
 			}
 		}
 	}
+	
 	
 	public static class keyPairMapper 
 	extends Mapper<LongWritable, Text, Text, Text> {
@@ -126,7 +128,7 @@ public class MissedKeySearch {
 	
 	protected static int executeMissedKeySearchJob(String resultPath, String fusedKeyPath, String outputPath, FileSystem fs) throws IOException, InterruptedException, ClassNotFoundException {
 
-		System.out.println("MissedKeySearch job begins");
+		System.out.println("MissedKeySearch3 job begins");
 		Job job = Job.getInstance();
 		job.setJarByClass(FusionKeyCreation.class);
 		job.setJobName("MissedKeySearch");
@@ -136,7 +138,7 @@ public class MissedKeySearch {
 		
 		MultipleInputs.addInputPath(job, new Path(resultPath), TextInputFormat.class, EmptyTextMapper.class);
 		//MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, keyPairMapper.class);
-		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), SequenceFileInputFormat.class, mapFileMapper.class);
+		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), SequenceFileInputFormat.class, FusionKeyValueMapper.class);
 		job.setReducerClass(MissedKeySearchReducer.class);
 
 		job.setMapOutputKeyClass(Text.class);
@@ -145,7 +147,7 @@ public class MissedKeySearch {
 		job.setOutputValueClass(Text.class);
 
 		int status = job.waitForCompletion(true) ? 0 : 1;
-		System.out.println("MissedKeySearch job ends with status " + status);
+		System.out.println("MissedKeySearch3 job ends with status " + status);
 		return status;
 	}
 	

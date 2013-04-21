@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -21,10 +23,15 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import fusion.hadoop.defuseMissedKeys.DefuseMissedKeys;
 import fusion.hadoop.fusionexecution.FusionExecution;
+import fusion.hadoop.fusionexecution.FusionExecution2;
+import fusion.hadoop.fusionexecution.FusionExecution3;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreateToSeqFile;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
+import fusion.hadoop.fusionkeycreation.FusionKeyCreation2;
+import fusion.hadoop.fusionkeycreation.FusionKeyCreation3;
 import fusion.hadoop.fusionkeycreation.MapFileParser;
 import fusion.hadoop.missedKeySearch.MissedKeySearch;
+import fusion.hadoop.missedKeySearch.MissedKeySearch3;
 
 
 // https://ccp.cloudera.com/display/CDH4DOC/Using+the+CDH4+Maven+Repository
@@ -131,13 +138,15 @@ public class WordCountFused
 		
 		long msTemp = System.currentTimeMillis();
 		int status = 0;
-		//status = FusionKeyCreation.main(args[0], fusionKeyMapPath);
-		status = FusionKeyCreateToSeqFile.main(args[0], fusionKeyMapPath);
+		status = FusionKeyCreation3.main(args[0], fusionKeyMapPath);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
-		if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
+		//if (status == 0) status = FusionExecution.main(inputPath, fusionKeyMapPath, executionResultPath);
+		if (status == 0) status = FusionExecution3.main(fusionKeyMapPath, executionResultPath);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", fusionKeyMapPath + "/fusionkey-r-*", missingKeySearchResult);
-		if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/part-r-*/data", missingKeySearchResult);
+		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/part-r-*/data", missingKeySearchResult);
+		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/fusionkey-r-*", missingKeySearchResult);
+		if (status == 0) status = MissedKeySearch3.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/fusionkeyvalue-r-*", missingKeySearchResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
