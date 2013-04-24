@@ -22,6 +22,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 import fusion.hadoop.TextPair;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation;
@@ -52,15 +53,14 @@ public class MissedKeySearch3 {
 	}	
 	
 	public static class FusionKeyValueMapper
-	extends Mapper<Text, FusionKeyCreation3.KeyCreationWritable, Text, Text> {
+	extends Mapper<Text, FusionKeysWritable, Text, Text> {
 		
 		@Override
-		public void map(Text key, FusionKeyCreation3.KeyCreationWritable value, Context context)
+		public void map(Text key, FusionKeysWritable value, Context context)
 				throws IOException, InterruptedException {
-			FusionKeysWritable fkw = (FusionKeysWritable) value.get();
-			if (fkw.OtherKey.toString().length() > 0) {
-				context.write(key, fkw.OtherKey);
-				context.write(fkw.OtherKey, key);
+			if (value.OtherKey.toString().length() > 0) {
+				context.write(key, value.OtherKey);
+				context.write(value.OtherKey, key);
 			} else {
 				context.write(key, key);
 			}
@@ -98,7 +98,7 @@ public class MissedKeySearch3 {
 	extends Reducer<Text, Text, Text, Text> {
 
 		private Text recoveryKeyText = new Text();
-		
+		private int missingKeyCount = 0;
 		@Override
 		public void reduce(Text key, Iterable<Text> values,
 				Context context)
@@ -113,8 +113,9 @@ public class MissedKeySearch3 {
 			}
 			
 			if (!emptyExists && recoveryKey != null) {
-				//System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
+				System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
 				/// keys missing in result
+				++missingKeyCount;
 				recoveryKeyText.set(recoveryKey);
 				context.write(recoveryKeyText, key);
 			}
@@ -140,7 +141,8 @@ public class MissedKeySearch3 {
 		//MultipleInputs.addInputPath(job, new Path(fusedKeyPath), TextInputFormat.class, keyPairMapper.class);
 		MultipleInputs.addInputPath(job, new Path(fusedKeyPath), SequenceFileInputFormat.class, FusionKeyValueMapper.class);
 		job.setReducerClass(MissedKeySearchReducer.class);
-
+		job.setOutputFormatClass(SequenceFileOutputFormat.class);
+		
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);

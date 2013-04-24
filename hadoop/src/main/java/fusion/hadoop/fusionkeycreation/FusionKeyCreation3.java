@@ -20,6 +20,7 @@ import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 import fusion.hadoop.WordCountFused;
+import fusion.hadoop.fusionexecution.FusionExecution3;
 
 public class FusionKeyCreation3 {
 	protected static String JOB_NAME = "FusionKeyCreation3";
@@ -35,6 +36,7 @@ public class FusionKeyCreation3 {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			ArrayList<String> tokens = WordCountFused.WordCountMapper.map(value);
+			FusionExecution3.FusionExecutionReducer.compute(value, null);
 			for (String token : tokens) {
 				word.set(token);
 				context.write(word, inputMapper(word));
@@ -47,20 +49,19 @@ public class FusionKeyCreation3 {
 		}
 	}
 
-	public static class FusionKeyReducer extends Reducer<Text, IntWritable, Text, KeyCreationWritable> {
+	public static class FusionKeyReducer extends Reducer<Text, IntWritable, Text, FusionKeysWritable> {
 		private Text last = new Text();
 		protected IntWritable[] lastValues;
 		private boolean lastConsumed = true;
 		protected int count = 0;
-		protected MultipleOutputs<Text, KeyCreationWritable> outputs;
-		protected KeyCreationWritable keyCreationWritable = new KeyCreationWritable();
+		protected MultipleOutputs<Text, FusionKeysWritable> outputs;
 		protected FusionKeysWritable fusionKeysWritable = new FusionKeysWritable();
 		protected IntWritable[] typeWritableArray = new IntWritable[1];
 		
 		@Override
 		protected void setup(Context context
 				) throws IOException, InterruptedException {
-			outputs = new MultipleOutputs<Text, KeyCreationWritable>(context);
+			outputs = new MultipleOutputs<Text, FusionKeysWritable>(context);
 		}
 
 		@Override
@@ -98,8 +99,7 @@ public class FusionKeyCreation3 {
 			fusionKeysWritable.OtherKey = new Text();
 			fusionKeysWritable.OtherKey.set("");
 			fusionKeysWritable.OtherValues.set(new IntWritable[0]);
-			keyCreationWritable.set(fusionKeysWritable);
-			outputs.write(key, keyCreationWritable, "fusionkeyvalue");
+			outputs.write(key, fusionKeysWritable, "fusionkeyvalue");
 			//outputs.write(key, keyCreationWritable, "key1");
 		}
 		
@@ -110,8 +110,7 @@ public class FusionKeyCreation3 {
 			fusionKeysWritable.Values.set(lastValues);
 			fusionKeysWritable.OtherKey = key;
 			fusionKeysWritable.OtherValues.set(values);
-			keyCreationWritable.set(fusionKeysWritable);
-			outputs.write(last, keyCreationWritable, "fusionkeyvalue");
+			outputs.write(last, fusionKeysWritable, "fusionkeyvalue");
 //			write(last, lastValues, "key0");
 //			write(key, values, "key1");
 //			valueArrayWritable.set(createWritableArray(lastValues));
@@ -145,18 +144,18 @@ public class FusionKeyCreation3 {
 
 
 	
-	public static class KeyCreationWritable extends GenericWritable {
-
-		private static Class[] CLASSES = {
-			FusionKeysWritable.class,
-			Text.class
-		};
-
-		protected Class[] getTypes() {
-			return CLASSES;
-		}
-
-	}
+//	public static class KeyCreationWritable extends GenericWritable {
+//
+//		private static Class[] CLASSES = {
+//			FusionKeysWritable.class,
+//			Text.class
+//		};
+//
+//		protected Class[] getTypes() {
+//			return CLASSES;
+//		}
+//
+//	}
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
 		main(args[0], args[1]);
@@ -177,8 +176,7 @@ public class FusionKeyCreation3 {
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(KeyCreationWritable.class);
-		//job.setNumReduceTasks(1);
+		job.setOutputValueClass(FusionKeysWritable.class);
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
 //		MapFileOutputFormat.setCompressOutput(job, true);
 //		MapFileOutputFormat.setOutputCompressorClass(job,GzipCodec.class);

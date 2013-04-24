@@ -30,7 +30,7 @@ import fusion.hadoop.fusionkeycreation.FusionKeysWritable;
 public class FusionExecution3 {
 	
 	public static class FusionExecutionMapper
-	extends Mapper<Text, FusionKeyCreation3.KeyCreationWritable, TextPair, IntWritable> {
+	extends Mapper<Text, FusionKeysWritable, TextPair, IntWritable> {
 		private Text word = new Text();
 		private final static IntWritable one = new IntWritable(1);
 		protected FusionKeyMapParser kmp;
@@ -44,14 +44,13 @@ public class FusionExecution3 {
 		}
 		
 		@Override
-		public void map(Text key, FusionKeyCreation3.KeyCreationWritable value, Context context)
+		public void map(Text key, FusionKeysWritable value, Context context)
 				throws IOException, InterruptedException {
-			FusionKeysWritable fkw = (FusionKeysWritable) value.get();
-			keyPairFused.set(key, fkw.OtherKey);
+			keyPairFused.set(key, value.OtherKey);
 
-			if (fkw.OtherKey.toString().length() > 0) {
-				keyPairRaw.set(emptyText, fkw.OtherKey);
-				Writable[] otherValues = (Writable[]) fkw.OtherValues.get(); 
+			if (value.OtherKey.toString().length() > 0) {
+				keyPairRaw.set(emptyText, value.OtherKey);
+				Writable[] otherValues = (Writable[]) value.OtherValues.get(); 
 				for (int i=0; i<otherValues.length; ++i) {
 					IntWritable v = (IntWritable) otherValues[i];
 					context.write(keyPairRaw, v);
@@ -62,7 +61,7 @@ public class FusionExecution3 {
 			}
 			
 			keyPairRaw.set(key, emptyText);
-			Writable[] values = (Writable[]) fkw.Values.get(); 
+			Writable[] values = (Writable[]) value.Values.get(); 
 			for (int i=0; i<values.length; ++i) {
 				IntWritable v = (IntWritable) values[i];
 				context.write(keyPairRaw, v);
@@ -85,7 +84,7 @@ public class FusionExecution3 {
 			keyPairRaw.set(key, empty);
 			Writable[] values =((FusionKeyCreation2.ValueArrayWritable) value.get()).get();
 			for (int i=0; i<values.length; ++i) {
-				System.out.println(" mapping: " + key.toString() + " :: " + values[i]);
+				//System.out.println(" mapping: " + key.toString() + " :: " + values[i]);
 				context.write(keyPairRaw, values[i]);
 			}
 		}
@@ -103,7 +102,7 @@ public class FusionExecution3 {
 			keyPairRaw.set(empty, key);
 			Writable[] values =((FusionKeyCreation2.ValueArrayWritable) value.get()).get();
 			for (int i=0; i<values.length; ++i) {
-				System.out.println(" mapping: " + key.toString() + " :: " + values[i]);
+				//System.out.println(" mapping: " + key.toString() + " :: " + values[i]);
 				context.write(keyPairRaw, values[i]);
 			}
 		}
@@ -152,7 +151,7 @@ public class FusionExecution3 {
 		protected IntWritable inputReduce(Text key, Iterable<IntWritable> values) {
 			try {
 				int sum = 0;
-				if (key.toString().compareTo("hadoop") == 0) throw new Exception("Fail to reduce.");
+				//if (key.toString().compareTo("a") == 0) throw new Exception("Fail to reduce.");
 				for (IntWritable value : values) {
 					sum += value.get();
 				}
@@ -164,10 +163,11 @@ public class FusionExecution3 {
 			return null;
 		}
 		
+		protected static int complexity = 1;
 		public static void compute(Text key, Iterable<IntWritable> values) {
 			///simulate long running process
-			for (int k=0; k<0; ++k) {
-				for (int i=40001; i<50000; ++i) {
+			for (int k=0; k<complexity; ++k) {
+				for (int i=2001; i<2999; ++i) {
 					boolean isPrime = true;
 					for (int j=2; j<i; ++j) {
 						if ((i % j) == 0) {

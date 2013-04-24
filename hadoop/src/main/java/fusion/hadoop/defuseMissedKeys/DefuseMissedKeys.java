@@ -103,11 +103,11 @@ public class DefuseMissedKeys {
 			for (DefuseArrayWritable value : values) {
 				if (value.get().length > 1) fusedResult = (IntWritable) value.get()[1];
 				else recoveryResult = (IntWritable) value.get()[0];
-				System.out.println("\t\tDefuseReducer: " + key + "\t" + value);
+				//System.out.println("\t\tDefuseReducer: " + key + "\t" + value);
 			}
 			
 			if (fusedResult != null && recoveryResult != null) {
-				System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
+				//System.out.println("\trecovery keys: " + key + "\t" + key.toString().length());
 				/// keys missing in result
 				context.write(key, Defuse(fusedResult, recoveryResult));
 			}

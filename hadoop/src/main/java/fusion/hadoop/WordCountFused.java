@@ -22,6 +22,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import fusion.hadoop.defuseMissedKeys.DefuseMissedKeys;
+import fusion.hadoop.defuseMissedKeys.DefuseMissedKeysWithoutMapFile;
 import fusion.hadoop.fusionexecution.FusionExecution;
 import fusion.hadoop.fusionexecution.FusionExecution2;
 import fusion.hadoop.fusionexecution.FusionExecution3;
@@ -148,7 +149,8 @@ public class WordCountFused
 		//if (status == 0) status = MissedKeySearch.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/fusionkey-r-*", missingKeySearchResult);
 		if (status == 0) status = MissedKeySearch3.main(executionResultPath + "/result-r-*", MapFileParser.PATH + "/fusionkeyvalue-r-*", missingKeySearchResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
-		if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
+		//if (status == 0) status = DefuseMissedKeys.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
+		if (status == 0) status = DefuseMissedKeysWithoutMapFile.main(executionResultPath + "/result-r-*", executionResultPath, missingKeySearchResult, missingKeyDefuseResult);
 		System.out.println("*** Job elapsed: " + (System.currentTimeMillis() - msTemp) + "ms\n"); msTemp = System.currentTimeMillis();
 		long msEnd = System.currentTimeMillis();
 		System.out.println("\n*** Total elapsed: " + (msEnd - msStart) + "ms");

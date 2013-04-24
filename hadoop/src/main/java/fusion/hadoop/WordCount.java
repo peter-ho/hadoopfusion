@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -15,6 +16,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import fusion.hadoop.fusionexecution.FusionExecution;
+import fusion.hadoop.fusionexecution.FusionExecution3;
 
 
 // https://ccp.cloudera.com/display/CDH4DOC/Using+the+CDH4+Maven+Repository
@@ -28,10 +30,16 @@ public class WordCount
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
+			FusionExecution3.FusionExecutionReducer.compute(value, null);
 			for (String token : WordCountFused.WordCountMapper.map(value)) {
 				word.set(token);
-				context.write(word, one);
+				context.write(word, inputMapper(value));
 			}
+		}
+		
+		public static IntWritable inputMapper(Text key) 
+		{
+			return one;
 		}
 	}
 
@@ -42,12 +50,13 @@ public class WordCount
 		public void reduce(Text key, Iterable<IntWritable> values,
 				Context context)
 						throws IOException, InterruptedException {
+			///if (key.toString().compareTo("a") == 0) throw new NullPointerException("Fail to reduce.");
 
 			int sum = 0;
 			for (IntWritable value : values) {
 				sum += value.get();
 			}
-			FusionExecution.FusionExecutionReducer.compute(key, values);
+			FusionExecution3.FusionExecutionReducer.compute(key, values);
 			context.write(key, new IntWritable(sum));
 		}
 	}
@@ -64,6 +73,9 @@ public class WordCount
 
 		Configuration conf = new Configuration();
 		conf.setInt("mapreduce.job.reduces", FusionConfiguration.NUM_OF_REDUCERS);
+		
+		FileSystem fs = FileSystem.get(conf);
+		fs.delete(new Path(args[1]), true);		
 		
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(WordCount.class);
