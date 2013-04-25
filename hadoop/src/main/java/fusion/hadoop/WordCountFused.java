@@ -124,6 +124,14 @@ public class WordCountFused
 	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException, URISyntaxException
 	{
 		System.out.println("\n*** WordCountFusion start...");
+		System.out.println("\n*** computation test...");
+		long msStart1 = System.currentTimeMillis();
+		FusionExecution3.FusionExecutionReducer.mapCompute(null, null);		
+		System.out.println("\n*** map compute elapsed: " + (System.currentTimeMillis() - msStart1) + "ms");
+		long msStart2 = System.currentTimeMillis();
+		FusionExecution3.FusionExecutionReducer.reduceCompute(null, null);		
+		System.out.println("\n*** reduce compute elapsed: " + (System.currentTimeMillis() - msStart1) + "ms");
+		
 		if (args.length != 2) 
 		{
 			System.err.println("Usage:: WordCount <input path> <output path>");

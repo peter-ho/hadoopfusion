@@ -36,7 +36,7 @@ public class FusionKeyCreation3 {
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			ArrayList<String> tokens = WordCountFused.WordCountMapper.map(value);
-			FusionExecution3.FusionExecutionReducer.compute(value, null);
+			FusionExecution3.FusionExecutionReducer.mapCompute(value, null);
 			for (String token : tokens) {
 				word.set(token);
 				context.write(word, inputMapper(word));

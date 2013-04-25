@@ -18,8 +18,13 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
+import com.google.common.collect.ComputationException;
+
 import fusion.hadoop.FusionConfiguration;
 import fusion.hadoop.TextPair;
+import fusion.hadoop.WordCount;
+import fusion.hadoop.WordCount.WordCountMapper;
+import fusion.hadoop.WordCount.WordCountReducer;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation2;
 import fusion.hadoop.fusionkeycreation.FusionKeyCreation3;
 import fusion.hadoop.fusionkeycreation.FusionKeyMap;
@@ -155,18 +160,36 @@ public class FusionExecution3 {
 				for (IntWritable value : values) {
 					sum += value.get();
 				}
-				compute(key, values);
+				reduceCompute(key, values);
 				return new IntWritable(sum);
 			} catch (Exception ex) {
 				System.err.println("Error when reducing key: " + key.toString() + "\n\t" + ex.getMessage());
 			}
 			return null;
 		}
+
 		
-		protected static int complexity = 1;
-		public static void compute(Text key, Iterable<IntWritable> values) {
+		protected static int reduceComplexity = 2;
+		public static void reduceCompute(Text key, Iterable<IntWritable> values) {
 			///simulate long running process
-			for (int k=0; k<complexity; ++k) {
+			for (int k=0; k<reduceComplexity; ++k) {
+				for (int i=2001; i<2999; ++i) {
+					boolean isPrime = true;
+					for (int j=2; j<i; ++j) {
+						if ((i % j) == 0) {
+							isPrime = false;
+							break;
+						}
+					}
+					if (isPrime) { }
+				}
+			}
+		}
+		
+		protected static int mapComplexity = 0;
+		public static void mapCompute(Text key, Iterable<IntWritable> values) {
+			///simulate long running process
+			for (int k=0; k<mapComplexity; ++k) {
 				for (int i=2001; i<2999; ++i) {
 					boolean isPrime = true;
 					for (int j=2; j<i; ++j) {
@@ -249,4 +272,16 @@ public class FusionExecution3 {
 		}
 		return status;
 	}
+	
+	public static void main( String[] args ) throws IOException, InterruptedException, ClassNotFoundException
+	{
+		System.out.println("\n*** compute start...");
+		long msStart = System.currentTimeMillis();
+		
+		FusionExecutionReducer.reduceCompute(null, null);
+		
+		long msEnd = System.currentTimeMillis();
+		System.out.println("\n*** Total elapsed: " + (msEnd - msStart) + "ms");
+	}
+
 }

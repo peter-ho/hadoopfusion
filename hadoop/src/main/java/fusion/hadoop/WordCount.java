@@ -30,7 +30,7 @@ public class WordCount
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			FusionExecution3.FusionExecutionReducer.compute(value, null);
+			FusionExecution3.FusionExecutionReducer.mapCompute(value, null);
 			for (String token : WordCountFused.WordCountMapper.map(value)) {
 				word.set(token);
 				context.write(word, inputMapper(value));
@@ -56,7 +56,7 @@ public class WordCount
 			for (IntWritable value : values) {
 				sum += value.get();
 			}
-			FusionExecution3.FusionExecutionReducer.compute(key, values);
+			FusionExecution3.FusionExecutionReducer.reduceCompute(key, values);
 			context.write(key, new IntWritable(sum));
 		}
 	}
@@ -75,7 +75,7 @@ public class WordCount
 		conf.setInt("mapreduce.job.reduces", FusionConfiguration.NUM_OF_REDUCERS);
 		
 		FileSystem fs = FileSystem.get(conf);
-		fs.delete(new Path(args[1]), true);		
+		fs.delete(new Path(args[1]), true);
 		
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(WordCount.class);
